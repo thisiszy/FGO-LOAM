@@ -26,6 +26,7 @@
 #include "lidar.h"
 #include "odomEstimationClass.h"
 
+// 储存变换到当前点云的位姿变换
 OdomEstimationClass odomEstimation;
 std::mutex mutex_lock;
 std::queue<sensor_msgs::PointCloud2ConstPtr> pointCloudEdgeBuf;
@@ -96,7 +97,7 @@ void odom_estimation(){
             }
 
 
-
+            // 当前位姿相对于初始位姿的变换
             Eigen::Quaterniond q_current(odomEstimation.odom.rotation());
             //q_current.normalize();
             Eigen::Vector3d t_current = odomEstimation.odom.translation();
@@ -106,6 +107,7 @@ void odom_estimation(){
             transform.setOrigin( tf::Vector3(t_current.x(), t_current.y(), t_current.z()) );
             tf::Quaternion q(q_current.x(),q_current.y(),q_current.z(),q_current.w());
             transform.setRotation(q);
+            // 广播当前base_links位姿相对于map的变换
             br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "map", "base_link"));
 
             // publish odometry

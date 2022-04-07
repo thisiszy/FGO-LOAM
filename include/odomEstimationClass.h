@@ -44,11 +44,14 @@ class OdomEstimationClass
 		void updatePointsToMap(const pcl::PointCloud<pcl::PointXYZI>::Ptr& edge_in, const pcl::PointCloud<pcl::PointXYZI>::Ptr& surf_in);
 		void getMap(pcl::PointCloud<pcl::PointXYZI>::Ptr& laserCloudMap);
 
+		// base_link相对于map的位姿变换
 		Eigen::Isometry3d odom;
+		// 线特征点map
 		pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudCornerMap;
+		// 面特征点map
 		pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudSurfMap;
 	private:
-		//optimization variable
+		//optimization variable，p[0-3]旋转矩阵，p[4-6]平移矩阵
 		double parameters[7] = {0, 0, 0, 1, 0, 0, 0};
 		Eigen::Map<Eigen::Quaterniond> q_w_curr = Eigen::Map<Eigen::Quaterniond>(parameters);
 		Eigen::Map<Eigen::Vector3d> t_w_curr = Eigen::Map<Eigen::Vector3d>(parameters + 4);
@@ -56,7 +59,9 @@ class OdomEstimationClass
 		Eigen::Isometry3d last_odom;
 
 		//kd-tree
+		// 线特征地图中的点
 		pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtreeEdgeMap;
+		// 面特征地图中的点
 		pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtreeSurfMap;
 
 		//points downsampling before add to map
@@ -66,7 +71,7 @@ class OdomEstimationClass
 		//local map
 		pcl::CropBox<pcl::PointXYZI> cropBoxFilter;
 
-		//optimization count 
+		//optimization count，限制优化的次数
 		int optimization_count;
 
 		//function
