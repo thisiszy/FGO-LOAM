@@ -7,6 +7,7 @@
 void LaserMappingClass::init(double map_resolution){
 	//init map
 	//init can have real object, but future added block does not need
+	// 将地图切分为多块（为什么这么做？）
 	for(int i=0;i<LASER_CELL_RANGE_HORIZONTAL*2+1;i++){
 		std::vector<std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr>> map_height_temp;
 		for(int j=0;j<LASER_CELL_RANGE_HORIZONTAL*2+1;j++){
@@ -103,6 +104,7 @@ void LaserMappingClass::addDepthCellPositive(void){
 }
 
 //extend map is points exceed size
+// 检查当前xyz是否在地图范围内，如果超出则进行相应拓展
 void LaserMappingClass::checkPoints(int& x, int& y, int& z){
 
 	while(x + LASER_CELL_RANGE_HORIZONTAL> map_width-1){
@@ -129,6 +131,7 @@ void LaserMappingClass::checkPoints(int& x, int& y, int& z){
 
 	//initialize 
 	//create object if area is null
+	// 扩展地图
 	for(int i=x-LASER_CELL_RANGE_HORIZONTAL;i<x+LASER_CELL_RANGE_HORIZONTAL+1;i++){
 		for(int j=y-LASER_CELL_RANGE_HORIZONTAL;j<y+LASER_CELL_RANGE_HORIZONTAL+1;j++){
 			for(int k=z-LASER_CELL_RANGE_VERTICAL;k<z+LASER_CELL_RANGE_VERTICAL+1;k++){
@@ -147,13 +150,15 @@ void LaserMappingClass::checkPoints(int& x, int& y, int& z){
 //update points to map 
 void LaserMappingClass::updateCurrentPointsToMap(const pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_in, const Eigen::Isometry3d& pose_current){
 	
+	// 查找当前传感器所在的地图cell坐标
 	int currentPosIdX = int(std::floor(pose_current.translation().x() / LASER_CELL_WIDTH + 0.5)) + origin_in_map_x;
 	int currentPosIdY = int(std::floor(pose_current.translation().y() / LASER_CELL_HEIGHT + 0.5)) + origin_in_map_y;
 	int currentPosIdZ = int(std::floor(pose_current.translation().z() / LASER_CELL_DEPTH + 0.5)) + origin_in_map_z;
 
-	//check is submap is null
+	//check is submap is null，检查当前坐标是否有效，如果无效则拓展地图
 	checkPoints(currentPosIdX,currentPosIdY,currentPosIdZ);
 
+	// 储存经过坐标变换的点云
 	pcl::PointCloud<pcl::PointXYZI>::Ptr transformed_pc(new pcl::PointCloud<pcl::PointXYZI>());
 	pcl::transformPointCloud(*pc_in, *transformed_pc, pose_current.cast<float>());
 	
@@ -166,12 +171,12 @@ void LaserMappingClass::updateCurrentPointsToMap(const pcl::PointCloud<pcl::Poin
 		int currentPointIdX = int(std::floor(point_temp.x / LASER_CELL_WIDTH + 0.5)) + origin_in_map_x;
 		int currentPointIdY = int(std::floor(point_temp.y / LASER_CELL_HEIGHT + 0.5)) + origin_in_map_y;
 		int currentPointIdZ = int(std::floor(point_temp.z / LASER_CELL_DEPTH + 0.5)) + origin_in_map_z;
-
+		// 像地图中添加点云
 		map[currentPointIdX][currentPointIdY][currentPointIdZ]->push_back(point_temp);
 		
 	}
 	
-	//filtering points 
+	//filtering points，下采样减少点云数量
 	for(int i=currentPosIdX-LASER_CELL_RANGE_HORIZONTAL;i<currentPosIdX+LASER_CELL_RANGE_HORIZONTAL+1;i++){
 		for(int j=currentPosIdY-LASER_CELL_RANGE_HORIZONTAL;j<currentPosIdY+LASER_CELL_RANGE_HORIZONTAL+1;j++){
 			for(int k=currentPosIdZ-LASER_CELL_RANGE_VERTICAL;k<currentPosIdZ+LASER_CELL_RANGE_VERTICAL+1;k++){
@@ -185,6 +190,7 @@ void LaserMappingClass::updateCurrentPointsToMap(const pcl::PointCloud<pcl::Poin
 
 }
 
+// 获取整个点云地图
 pcl::PointCloud<pcl::PointXYZI>::Ptr LaserMappingClass::getMap(void){
 	pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudMap = pcl::PointCloud<pcl::PointXYZI>::Ptr(new  pcl::PointCloud<pcl::PointXYZI>());
 	for (int i = 0; i < map_width; i++){

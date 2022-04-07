@@ -69,19 +69,29 @@ void laser_mapping(){
                 continue;  
             }
 
-            //if time aligned 
+            //if time aligned ，pc_in只有特征点
             pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_in(new pcl::PointCloud<pcl::PointXYZI>());
             pcl::fromROSMsg(*pointCloudBuf.front(), *pointcloud_in);
             ros::Time pointcloud_time = (pointCloudBuf.front())->header.stamp;
 
+            // 获取当前最新位姿
             Eigen::Isometry3d current_pose = Eigen::Isometry3d::Identity();
-            current_pose.rotate(Eigen::Quaterniond(odometryBuf.front()->pose.pose.orientation.w,odometryBuf.front()->pose.pose.orientation.x,odometryBuf.front()->pose.pose.orientation.y,odometryBuf.front()->pose.pose.orientation.z));  
-            current_pose.pretranslate(Eigen::Vector3d(odometryBuf.front()->pose.pose.position.x,odometryBuf.front()->pose.pose.position.y,odometryBuf.front()->pose.pose.position.z));
+            current_pose.rotate(
+                Eigen::Quaterniond(
+                    odometryBuf.front()->pose.pose.orientation.w,
+                    odometryBuf.front()->pose.pose.orientation.x,
+                    odometryBuf.front()->pose.pose.orientation.y,
+                    odometryBuf.front()->pose.pose.orientation.z));  
+            current_pose.pretranslate(
+                Eigen::Vector3d(
+                    odometryBuf.front()->pose.pose.position.x,
+                    odometryBuf.front()->pose.pose.position.y,
+                    odometryBuf.front()->pose.pose.position.z));
             pointCloudBuf.pop();
             odometryBuf.pop();
             mutex_lock.unlock();
             
-
+            // 只添加线、面特征点到map中
             laserMapping.updateCurrentPointsToMap(pointcloud_in,current_pose);
 
             pcl::PointCloud<pcl::PointXYZI>::Ptr pc_map = laserMapping.getMap();
@@ -125,6 +135,7 @@ int main(int argc, char **argv)
     lidar_param.setMinDistance(min_dis);
 
     laserMapping.init(map_resolution);
+    // 这里只有特征点
     ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("/velodyne_points_filtered", 100, velodyneHandler);
     ros::Subscriber subOdometry = nh.subscribe<nav_msgs::Odometry>("/odom", 100, odomCallback);
 
