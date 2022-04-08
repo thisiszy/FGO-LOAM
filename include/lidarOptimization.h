@@ -36,14 +36,19 @@ class SurfNormAnalyticCostFunction : public ceres::SizedCostFunction<1, 7> {
 		double negative_OA_dot_norm;
 };
 
+// 定义一些SO3上的操作，如何求和、计算Jacobian
+// http://ceres-solver.org/nnls_modeling.html#localparameterization
 class PoseSE3Parameterization : public ceres::LocalParameterization {
 public:
 	
     PoseSE3Parameterization() {}
     virtual ~PoseSE3Parameterization() {}
+	// 定义流形上的点x在切空间上移动delta再重投影到流形上得到x_plus_delta的操作
     virtual bool Plus(const double* x, const double* delta, double* x_plus_delta) const;
     virtual bool ComputeJacobian(const double* x, double* jacobian) const;
+	// x的ambient space维度
     virtual int GlobalSize() const { return 7; }
+	// 目标空间delta的维度
     virtual int LocalSize() const { return 6; }
 };
 

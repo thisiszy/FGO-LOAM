@@ -4,6 +4,7 @@
 
 #include "lidarOptimization.h"
 
+// 参数：需要优化的点的坐标，直线上点a，直线上点b
 EdgeAnalyticCostFunction::EdgeAnalyticCostFunction(Eigen::Vector3d curr_point_, Eigen::Vector3d last_point_a_, Eigen::Vector3d last_point_b_)
         : curr_point(curr_point_), last_point_a(last_point_a_), last_point_b(last_point_b_){
 
@@ -11,12 +12,15 @@ EdgeAnalyticCostFunction::EdgeAnalyticCostFunction(Eigen::Vector3d curr_point_, 
 
 bool EdgeAnalyticCostFunction::Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
 {
-    
+    // 本次优化前的旋转矩阵
     Eigen::Map<const Eigen::Quaterniond> q_last_curr(parameters[0]);
+    // 本次优化前的平移矩阵
     Eigen::Map<const Eigen::Vector3d> t_last_curr(parameters[0] + 4);
+    // 通过以上位姿变换参数变换得到的点的坐标
     Eigen::Vector3d lp;
     lp = q_last_curr * curr_point + t_last_curr; 
 
+    // 使用公式residuals[0]=|(lp-a)x(lp-b)|/|a-b|（lp-a和lp-b两个向量构成的平行四边形面积/平行四边形对角边==点lp到a-b的距离）
     Eigen::Vector3d nu = (lp - last_point_a).cross(lp - last_point_b);
     Eigen::Vector3d de = last_point_a - last_point_b;
     double de_norm = de.norm();
@@ -50,9 +54,13 @@ SurfNormAnalyticCostFunction::SurfNormAnalyticCostFunction(Eigen::Vector3d curr_
 
 bool SurfNormAnalyticCostFunction::Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
 {
+    // 本次优化前的旋转矩阵
     Eigen::Map<const Eigen::Quaterniond> q_w_curr(parameters[0]);
+    // 本次优化前的平移矩阵
     Eigen::Map<const Eigen::Vector3d> t_w_curr(parameters[0] + 4);
+    // 通过以上位姿变换参数变换得到的点的坐标
     Eigen::Vector3d point_w = q_w_curr * curr_point + t_w_curr;
+    // residuals[0]=平面法向量 . w的向量 + 法向量的反向，这个值越小越好
     residuals[0] = plane_unit_norm.dot(point_w) + negative_OA_dot_norm;
 
     if(jacobians != NULL)
@@ -73,18 +81,22 @@ bool SurfNormAnalyticCostFunction::Evaluate(double const *const *parameters, dou
 
 }   
 
-
+// 输入：当前点x（是四元数），增量（是se3），变换结果x_plus_delta（四元数）
 bool PoseSE3Parameterization::Plus(const double *x, const double *delta, double *x_plus_delta) const
 {
     Eigen::Map<const Eigen::Vector3d> trans(x + 4);
 
     Eigen::Quaterniond delta_q;
     Eigen::Vector3d delta_t;
+    // 将delta分解为q和t两个变换，delta是se3矩阵，
     getTransformFromSe3(Eigen::Map<const Eigen::Matrix<double,6,1>>(delta), delta_q, delta_t);
+    // 将x变换为四元数
     Eigen::Map<const Eigen::Quaterniond> quater(x);
+    // 定义变换后的x+delta的q t两个变换
     Eigen::Map<Eigen::Quaterniond> quater_plus(x_plus_delta);
     Eigen::Map<Eigen::Vector3d> trans_plus(x_plus_delta + 4);
 
+    // x_plus_delta = x + delta（将delta的变换作用在x上）
     quater_plus = delta_q * quater;
     trans_plus = delta_q * trans + delta_t;
 
@@ -100,6 +112,7 @@ bool PoseSE3Parameterization::ComputeJacobian(const double *x, double *jacobian)
     return true;
 }
 
+// 将se3转换为变换矩阵q和t
 void getTransformFromSe3(const Eigen::Matrix<double,6,1>& se3, Eigen::Quaterniond& q, Eigen::Vector3d& t){
     Eigen::Vector3d omega(se3.data());
     Eigen::Vector3d upsilon(se3.data()+3);
@@ -139,6 +152,14 @@ void getTransformFromSe3(const Eigen::Matrix<double,6,1>& se3, Eigen::Quaternion
     t = J*upsilon;
 }
 
+/*
+变换为反对称矩阵
+mat_in = [a, b, c]
+skew_mat = 
+| 0 -c  b|
+| c  0 -a|
+|-b  a  0|
+*/
 Eigen::Matrix<double,3,3> skew(Eigen::Matrix<double,3,1>& mat_in){
     Eigen::Matrix<double,3,3> skew_mat;
     skew_mat.setZero();
