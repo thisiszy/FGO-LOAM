@@ -142,6 +142,8 @@ int main(int argc, char **argv)
     map_pub = nh.advertise<sensor_msgs::PointCloud2>("/map", 100);
     std::thread laser_mapping_process{laser_mapping};
 
+    ROS_INFO("\033[1;32m---->\033[0m Laser Mapping Started.");
+
     ros::spin();
 
     return 0;
