@@ -56,30 +56,54 @@ void OdomEstimationClass::updatePointsToMap(const pcl::PointCloud<pcl::PointXYZI
 
         // 优化optimization_count轮（每次会对parameter在前一次基础上进行优化）
         for (int iterCount = 0; iterCount < optimization_count; iterCount++){
-            ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
-            ceres::Problem::Options problem_options;
-            // 优化问题
-            ceres::Problem problem(problem_options);
+            {
+                ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
+                ceres::Problem::Options problem_options;
+                // 优化问题
+                ceres::Problem problem(problem_options);
 
-            // 设置需要优化的参数
-            problem.AddParameterBlock(parameters, 7, new PoseSE3Parameterization());
-            
-            // 添加线特征项
-            addEdgeCostFactor(downsampledEdgeCloud,laserCloudCornerMap,problem,loss_function);
-            // 添加面特征项
-            addSurfCostFactor(downsampledSurfCloud,laserCloudSurfMap,problem,loss_function);
+                // 设置需要优化的参数
+                problem.AddParameterBlock(parameters, 7, new PoseSE3Parameterization());
+                
+                // 添加线特征项
+                addEdgeCostFactor(downsampledEdgeCloud,laserCloudCornerMap,problem,loss_function);
 
-            // 优化参数设置
-            ceres::Solver::Options options;
-            options.linear_solver_type = ceres::DENSE_QR;
-            options.max_num_iterations = 4;
-            options.minimizer_progress_to_stdout = false;
-            options.check_gradients = false;
-            options.gradient_check_relative_precision = 1e-4;
-            ceres::Solver::Summary summary;
+                // 优化参数设置
+                ceres::Solver::Options options;
+                options.linear_solver_type = ceres::DENSE_QR;
+                options.max_num_iterations = 4;
+                options.minimizer_progress_to_stdout = false;
+                options.check_gradients = false;
+                options.gradient_check_relative_precision = 1e-4;
+                ceres::Solver::Summary summary;
 
-            // solve 会修改parameters，q_w_curr和t_w_curr
-            ceres::Solve(options, &problem, &summary);
+                // solve 会修改parameters，q_w_curr和t_w_curr
+                ceres::Solve(options, &problem, &summary);
+            }
+            {
+                ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
+                ceres::Problem::Options problem_options;
+                // 优化问题
+                ceres::Problem problem(problem_options);
+
+                // 设置需要优化的参数
+                problem.AddParameterBlock(parameters, 7, new PoseSE3Parameterization());
+                
+                // 添加面特征项
+                addSurfCostFactor(downsampledSurfCloud,laserCloudSurfMap,problem,loss_function);
+
+                // 优化参数设置
+                ceres::Solver::Options options;
+                options.linear_solver_type = ceres::DENSE_QR;
+                options.max_num_iterations = 4;
+                options.minimizer_progress_to_stdout = false;
+                options.check_gradients = false;
+                options.gradient_check_relative_precision = 1e-4;
+                ceres::Solver::Summary summary;
+
+                // solve 会修改parameters，q_w_curr和t_w_curr
+                ceres::Solve(options, &problem, &summary);
+            }
 
         }
     }else{
