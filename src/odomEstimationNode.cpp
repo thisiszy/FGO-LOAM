@@ -34,6 +34,11 @@ std::queue<sensor_msgs::PointCloud2ConstPtr> pointCloudSurfBuf;
 lidar::Lidar lidar_param;
 
 ros::Publisher pubLaserOdometry;
+
+// dt文件
+// std::ofstream dt_file;
+FILE *dt_file;
+
 void velodyneSurfHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 {
     mutex_lock.lock();
@@ -95,7 +100,11 @@ void odom_estimation(){
                 total_time+=time_temp;
                 ROS_INFO("average odom estimation time %f ms \n \n", total_time/total_frame);
             }
-
+            Eigen::Isometry3d T = odomEstimation.odom;
+                fprintf(dt_file, "%f %f %f %f %f %f %f %f %f %f %f %f\n", 
+                    T(0,0), T(0,1), T(0,2), T(0,3),
+                    T(1,0), T(1,1), T(1,2), T(1,3),
+                    T(2,0), T(2,1), T(2,2), T(2,3));
 
             // 当前位姿相对于初始位姿的变换
             Eigen::Quaterniond q_current(odomEstimation.odom.rotation());
@@ -142,12 +151,14 @@ int main(int argc, char **argv)
     double max_dis = 60.0;
     double min_dis = 2.0;
     double map_resolution = 0.4;
+    std::string dt_file_loc;
     nh.getParam("/scan_period", scan_period); 
     nh.getParam("/vertical_angle", vertical_angle); 
     nh.getParam("/max_dis", max_dis);
     nh.getParam("/min_dis", min_dis);
     nh.getParam("/scan_line", scan_line);
     nh.getParam("/map_resolution", map_resolution);
+    nh.getParam("/dt_file_loc", dt_file_loc);
 
     lidar_param.setScanPeriod(scan_period);
     lidar_param.setVerticalAngle(vertical_angle);
@@ -162,7 +173,15 @@ int main(int argc, char **argv)
     pubLaserOdometry = nh.advertise<nav_msgs::Odometry>("/odom", 100);
     std::thread odom_estimation_process{odom_estimation};
 
+    ROS_INFO("\033[1;32m---->\033[0m Odometey Started.");
+
+    // dt_file.open(dt_file_loc);
+    dt_file = fopen(dt_file_loc.c_str(), "w");
+
     ros::spin();
+
+    // dt_file.close();
+    fclose(dt_file);
 
     return 0;
 }
