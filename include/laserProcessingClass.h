@@ -15,6 +15,8 @@
 
 #include "lidar.h"
 
+#include "patchwork/patchwork.hpp"
+
 //points covariance class
 class Double2d{
 public:
@@ -36,8 +38,9 @@ class LaserProcessingClass
     public:
     	LaserProcessingClass();
 		void init(lidar::Lidar lidar_param_in);
-		void featureExtraction(const pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_in, pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_out_edge, pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_out_surf);
+		void featureExtraction(const pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_ground, const pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_not_ground, pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_out_edge, pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_out_surf);
 		void featureExtractionFromSector(const pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_in, std::vector<Double2d>& cloudCurvature, pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_out_edge, pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_out_surf);	
+		void groundSegmentation(const pcl::PointCloud<pcl::PointXYZI>& pc_in, pcl::PointCloud<pcl::PointXYZI>& cloudGround, pcl::PointCloud<pcl::PointXYZI>& cloudNotGround);
 	private:
      	lidar::Lidar lidar_param;
 };

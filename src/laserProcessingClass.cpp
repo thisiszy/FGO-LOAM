@@ -9,12 +9,14 @@ void LaserProcessingClass::init(lidar::Lidar lidar_param_in){
 
 }
 
-void LaserProcessingClass::featureExtraction(const pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_in, pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_out_edge, pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_out_surf){
+// Lego Loam的近似实现
+void LaserProcessingClass::featureExtraction(const pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_ground, const pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_not_ground, pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_out_edge, pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_out_surf){
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pc_temp;          
+    // *pc_temp += *pc_ground + *pc_not_ground;
+    pc_temp = pc_not_ground;
 
     std::vector<int> indices;
-    pcl::removeNaNFromPointCloud(*pc_in, indices);
-
-
+    pcl::removeNaNFromPointCloud(*pc_temp, indices);
     int N_SCANS = lidar_param.num_lines;
     // 储存每个SCAN的点云 index 0是第0条SCAN的点云
     std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> laserCloudScans;
@@ -24,16 +26,16 @@ void LaserProcessingClass::featureExtraction(const pcl::PointCloud<pcl::PointXYZ
     }
 
     // 将属于不同SCAN的点云分离开
-    for (int i = 0; i < (int) pc_in->points.size(); i++)
+    for (int i = 0; i < (int) pc_temp->points.size(); i++)
     {
         int scanID=0;
         // 在xy平面上的投影长度
-        double distance = sqrt(pc_in->points[i].x * pc_in->points[i].x + pc_in->points[i].y * pc_in->points[i].y);
+        double distance = sqrt(pc_temp->points[i].x * pc_temp->points[i].x + pc_temp->points[i].y * pc_temp->points[i].y);
         // 滤除距离传感器太近或太远的点
         if(distance<lidar_param.min_distance || distance>lidar_param.max_distance)
             continue;
         // 和xy平面的夹角
-        double angle = atan(pc_in->points[i].z / distance) * 180 / M_PI;
+        double angle = atan(pc_temp->points[i].z / distance) * 180 / M_PI;
         
         if (N_SCANS == 16)
         {
@@ -69,7 +71,7 @@ void LaserProcessingClass::featureExtraction(const pcl::PointCloud<pcl::PointXYZ
         {
             printf("wrong scan number\n");
         }
-        laserCloudScans[scanID]->push_back(pc_in->points[i]); 
+        laserCloudScans[scanID]->push_back(pc_temp->points[i]); 
 
     }
 
@@ -83,12 +85,19 @@ void LaserProcessingClass::featureExtraction(const pcl::PointCloud<pcl::PointXYZ
         int total_points = laserCloudScans[i]->points.size()-10;
         // 忽略前后五个点，对其它点计算曲率（因为前后五个点周围的点不够计算曲率）
         for(int j = 5; j < (int)laserCloudScans[i]->points.size() - 5; j++){
-            double diffX = laserCloudScans[i]->points[j - 5].x + laserCloudScans[i]->points[j - 4].x + laserCloudScans[i]->points[j - 3].x + laserCloudScans[i]->points[j - 2].x + laserCloudScans[i]->points[j - 1].x - 10 * laserCloudScans[i]->points[j].x + laserCloudScans[i]->points[j + 1].x + laserCloudScans[i]->points[j + 2].x + laserCloudScans[i]->points[j + 3].x + laserCloudScans[i]->points[j + 4].x + laserCloudScans[i]->points[j + 5].x;
-            double diffY = laserCloudScans[i]->points[j - 5].y + laserCloudScans[i]->points[j - 4].y + laserCloudScans[i]->points[j - 3].y + laserCloudScans[i]->points[j - 2].y + laserCloudScans[i]->points[j - 1].y - 10 * laserCloudScans[i]->points[j].y + laserCloudScans[i]->points[j + 1].y + laserCloudScans[i]->points[j + 2].y + laserCloudScans[i]->points[j + 3].y + laserCloudScans[i]->points[j + 4].y + laserCloudScans[i]->points[j + 5].y;
-            double diffZ = laserCloudScans[i]->points[j - 5].z + laserCloudScans[i]->points[j - 4].z + laserCloudScans[i]->points[j - 3].z + laserCloudScans[i]->points[j - 2].z + laserCloudScans[i]->points[j - 1].z - 10 * laserCloudScans[i]->points[j].z + laserCloudScans[i]->points[j + 1].z + laserCloudScans[i]->points[j + 2].z + laserCloudScans[i]->points[j + 3].z + laserCloudScans[i]->points[j + 4].z + laserCloudScans[i]->points[j + 5].z;
-            // 储存id和曲率
-            Double2d distance(j,diffX * diffX + diffY * diffY + diffZ * diffZ);
-            cloudCurvature.push_back(distance);
+            // 周围有连续点
+            if(fabs(laserCloudScans[i]->points[j + 5].intensity - laserCloudScans[i]->points[j - 5].intensity - 10.0) < 1e-2){
+                double diffX = laserCloudScans[i]->points[j - 5].x + laserCloudScans[i]->points[j - 4].x + laserCloudScans[i]->points[j - 3].x + laserCloudScans[i]->points[j - 2].x + laserCloudScans[i]->points[j - 1].x - 10 * laserCloudScans[i]->points[j].x + laserCloudScans[i]->points[j + 1].x + laserCloudScans[i]->points[j + 2].x + laserCloudScans[i]->points[j + 3].x + laserCloudScans[i]->points[j + 4].x + laserCloudScans[i]->points[j + 5].x;
+                double diffY = laserCloudScans[i]->points[j - 5].y + laserCloudScans[i]->points[j - 4].y + laserCloudScans[i]->points[j - 3].y + laserCloudScans[i]->points[j - 2].y + laserCloudScans[i]->points[j - 1].y - 10 * laserCloudScans[i]->points[j].y + laserCloudScans[i]->points[j + 1].y + laserCloudScans[i]->points[j + 2].y + laserCloudScans[i]->points[j + 3].y + laserCloudScans[i]->points[j + 4].y + laserCloudScans[i]->points[j + 5].y;
+                double diffZ = laserCloudScans[i]->points[j - 5].z + laserCloudScans[i]->points[j - 4].z + laserCloudScans[i]->points[j - 3].z + laserCloudScans[i]->points[j - 2].z + laserCloudScans[i]->points[j - 1].z - 10 * laserCloudScans[i]->points[j].z + laserCloudScans[i]->points[j + 1].z + laserCloudScans[i]->points[j + 2].z + laserCloudScans[i]->points[j + 3].z + laserCloudScans[i]->points[j + 4].z + laserCloudScans[i]->points[j + 5].z;
+                // 储存id和曲率
+                Double2d distance(j,diffX * diffX + diffY * diffY + diffZ * diffZ);
+                cloudCurvature.push_back(distance);
+            }
+            else{
+                Double2d distance(j,-1);
+                cloudCurvature.push_back(distance);
+            }
 
         }
         // 将一个SCAN分为6个sector
@@ -110,6 +119,8 @@ void LaserProcessingClass::featureExtraction(const pcl::PointCloud<pcl::PointXYZ
         }
 
     }
+    // 将地面中的点全部作为平面点，同时加上非地面点中提取出的平面点
+    *pc_out_surf += *pc_ground;
 
 }
 
@@ -227,9 +238,9 @@ void LaserProcessingClass::featureExtractionFromSector(const pcl::PointCloud<pcl
     for (int i = 0; i <= (int)cloudCurvature.size()-1; i++)
     {
         int ind = cloudCurvature[i].id; 
-        // 如果该点没有被选中过
+        // 如果该点没有被选中过并且该点不是无效点
         // TODO: 专门开个数组用来记录某个点是否被选中过
-        if( std::find(picked_points.begin(), picked_points.end(), ind)==picked_points.end())
+        if( fabs(cloudCurvature[i].value + 1) < 1e-2 && std::find(picked_points.begin(), picked_points.end(), ind)==picked_points.end() )
         {
             // 则认为该点是平面点
             pc_out_surf->push_back(pc_in->points[ind]);

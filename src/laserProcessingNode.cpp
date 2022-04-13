@@ -36,6 +36,9 @@ lidar::Lidar lidar_param;
 ros::Publisher pubEdgePoints;
 ros::Publisher pubSurfPoints;
 ros::Publisher pubLaserCloudFiltered;
+// ros::Publisher pubGroundPoints;
+// ros::Publisher pubNotGroundPoints;
+PatchWork<pcl::PointXYZI> PatchworkGroundSeg;
 
 void velodyneHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 {
@@ -59,12 +62,38 @@ void laser_processing(){
             pointCloudBuf.pop();
             mutex_lock.unlock();
 
+            // TODO: 把patchwork作为一个单独的节点发布
+            // 将点云编号，编号存在intensity中
+            int cloud_size = pointcloud_in->size();
+            for(int i = 0; i < cloud_size; i++){
+                pointcloud_in->points[i].intensity = i;
+            }
+            pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_ground(new pcl::PointCloud<pcl::PointXYZI>());          
+            pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_not_ground(new pcl::PointCloud<pcl::PointXYZI>());
+            double time_taken;
+            PatchworkGroundSeg.estimate_ground(*pointcloud_in, *pointcloud_ground, *pointcloud_not_ground, time_taken);
+            // 将被patchwork打乱之后的点云重新编号
+            std::sort(pointcloud_ground->points.begin(), pointcloud_ground->points.end(), [](const pcl::PointXYZI & a, const pcl::PointXYZI & b)
+            { 
+                return a.intensity < b.intensity; 
+            });
+            std::sort(pointcloud_not_ground->points.begin(), pointcloud_not_ground->points.end(), [](const pcl::PointXYZI & a, const pcl::PointXYZI & b)
+            { 
+                return a.intensity < b.intensity; 
+            });
+            // 标记ground点云
+            for(auto &point : pointcloud_ground->points){
+                point.intensity += 0.5;
+            }
+            // cout << "not ground : " << pointcloud_not_ground->size() << endl;
+
+
             pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_edge(new pcl::PointCloud<pcl::PointXYZI>());          
             pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_surf(new pcl::PointCloud<pcl::PointXYZI>());
 
             std::chrono::time_point<std::chrono::system_clock> start, end;
             start = std::chrono::system_clock::now();
-            laserProcessing.featureExtraction(pointcloud_in,pointcloud_edge,pointcloud_surf);
+            laserProcessing.featureExtraction(pointcloud_ground, pointcloud_not_ground, pointcloud_edge, pointcloud_surf);
             end = std::chrono::system_clock::now();
             std::chrono::duration<float> elapsed_seconds = end - start;
             total_frame++;
@@ -93,6 +122,20 @@ void laser_processing(){
             surfPointsMsg.header.stamp = pointcloud_time;
             surfPointsMsg.header.frame_id = "base_link";
             pubSurfPoints.publish(surfPointsMsg);
+
+
+            // sensor_msgs::PointCloud2 surfGroundMsg;
+            // pcl::toROSMsg(*pointcloud_ground, surfGroundMsg);
+            // surfGroundMsg.header.stamp = pointcloud_time;
+            // surfGroundMsg.header.frame_id = "base_link";
+            // pubGroundPoints.publish(surfGroundMsg);
+
+
+            // sensor_msgs::PointCloud2 surfNotGroundMsg;
+            // pcl::toROSMsg(*pointcloud_not_ground, surfNotGroundMsg);
+            // surfNotGroundMsg.header.stamp = pointcloud_time;
+            // surfNotGroundMsg.header.frame_id = "base_link";
+            // pubNotGroundPoints.publish(surfNotGroundMsg);
 
         }
         //sleep 2 ms every time
@@ -125,6 +168,7 @@ int main(int argc, char **argv)
     lidar_param.setMinDistance(min_dis);
 
     laserProcessing.init(lidar_param);
+    PatchworkGroundSeg.init(nh);
 
     ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("/velodyne_points", 100, velodyneHandler);
 
@@ -134,7 +178,13 @@ int main(int argc, char **argv)
 
     pubSurfPoints = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surf", 100); 
 
+    // pubGroundPoints = nh.advertise<sensor_msgs::PointCloud2>("/laser_ground", 100); 
+
+    // pubNotGroundPoints = nh.advertise<sensor_msgs::PointCloud2>("/laser_not_ground", 100); 
+
     std::thread laser_processing_process{laser_processing};
+
+    ROS_INFO("\033[1;32m---->\033[0m Laser Processing Started.");
 
     ros::spin();
 
