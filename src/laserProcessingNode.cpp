@@ -62,6 +62,10 @@ void laser_processing(){
             pointCloudBuf.pop();
             mutex_lock.unlock();
 
+
+            std::chrono::time_point<std::chrono::system_clock> start, end;
+            start = std::chrono::system_clock::now();
+
             // TODO: 把patchwork作为一个单独的节点发布
             // 将点云编号，编号存在intensity中
             int cloud_size = pointcloud_in->size();
@@ -85,15 +89,11 @@ void laser_processing(){
             for(auto &point : pointcloud_ground->points){
                 point.intensity += 0.5;
             }
-            // cout << "not ground : " << pointcloud_not_ground->size() << endl;
-
 
             pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_edge(new pcl::PointCloud<pcl::PointXYZI>());          
             pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_surf(new pcl::PointCloud<pcl::PointXYZI>());
-
-            std::chrono::time_point<std::chrono::system_clock> start, end;
-            start = std::chrono::system_clock::now();
             laserProcessing.featureExtraction(pointcloud_ground, pointcloud_not_ground, pointcloud_edge, pointcloud_surf);
+            
             end = std::chrono::system_clock::now();
             std::chrono::duration<float> elapsed_seconds = end - start;
             total_frame++;

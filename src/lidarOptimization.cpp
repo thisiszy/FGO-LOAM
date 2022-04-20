@@ -13,33 +13,74 @@ EdgeAnalyticCostFunction::EdgeAnalyticCostFunction(Eigen::Vector3d curr_point_, 
 bool EdgeAnalyticCostFunction::Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
 {
     // 本次优化前的旋转矩阵
-    Eigen::Map<const Eigen::Quaterniond> q_last_curr(parameters[0]);
+    Eigen::Quaterniond q_w_curr;
     // 本次优化前的平移矩阵
-    Eigen::Map<const Eigen::Vector3d> t_last_curr(parameters[0] + 4);
+    Eigen::Vector3d t_w_curr;
+    getPose(parameters, q_w_curr, t_w_curr);
+
     // 通过以上位姿变换参数变换得到的点的坐标
-    Eigen::Vector3d lp;
-    lp = q_last_curr * curr_point + t_last_curr; 
+    Eigen::Vector3d point_w = q_w_curr * curr_point + t_w_curr; 
 
     // 使用公式residuals[0]=|(lp-a)x(lp-b)|/|a-b|（lp-a和lp-b两个向量构成的平行四边形面积/平行四边形对角边==点lp到a-b的距离）
-    Eigen::Vector3d nu = (lp - last_point_a).cross(lp - last_point_b);
-    Eigen::Vector3d de = last_point_a - last_point_b;
-    double de_norm = de.norm();
-    residuals[0] = nu.norm()/de_norm;
-    
-    if(jacobians != NULL)
+    Eigen::Vector3d nu = (point_w - last_point_a).cross(point_w - last_point_b);
+    Eigen::Vector3d de = last_point_b - last_point_a;
+    residuals[0] = nu.norm()/de.norm();
+    /*
+    d(R)/d(rx) = 
     {
-        if(jacobians[0] != NULL)
-        {
-            Eigen::Matrix3d skew_lp = skew(lp);
-            Eigen::Matrix<double, 3, 6> dp_by_se3;
-            dp_by_se3.block<3,3>(0,0) = -skew_lp;
-            (dp_by_se3.block<3,3>(0, 3)).setIdentity();
-            Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> > J_se3(jacobians[0]);
-            J_se3.setZero();
-            Eigen::Matrix3d skew_de = skew(de);
-            J_se3.block<1,6>(0,0) = - nu.transpose() / nu.norm() * skew_de * dp_by_se3/de_norm;
-      
-        }
+        {0, Cos[x] Cos[z] Sin[y] + Sin[x] Sin[z],   -Cos[z] Sin[x] Sin[y] + Cos[x] Sin[z]   }, 
+        {0, -Cos[z] Sin[x] + Cos[x] Sin[y] Sin[z],  -Cos[x] Cos[z] - Sin[x] Sin[y] Sin[z]   }, 
+        {0, Cos[x] Cos[y],                          -Cos[y] Sin[x]                          }
+    }
+    d(R)/d(ry) = 
+    {
+        {-Cos[z] Sin[y],    Cos[y] Cos[z] Sin[x],   Cos[x] Cos[y] Cos[z]}, 
+        {-Sin[y] Sin[z],    Cos[y] Sin[x] Sin[z],   Cos[x] Cos[y] Sin[z]}, 
+        {-Cos[y],           -Sin[x] Sin[y],         -Cos[x] Sin[y]      }
+    }
+    d(R)/d(rz) = 
+    {
+        {-Cos[y] Sin[z],    -Cos[x] Cos[z] - Sin[x] Sin[y] Sin[z],  Cos[z] Sin[x] - Cos[x] Sin[y] Sin[z]}, 
+        {Cos[y] Cos[z],     Cos[z] Sin[x] Sin[y] - Cos[x] Sin[z],   Cos[x] Cos[z] Sin[y] + Sin[x] Sin[z]}, 
+        {0,                 0,                                      0                                   }
+    }
+    */
+    if(jacobians != NULL && jacobians[0] != NULL)
+    {
+        Eigen::Matrix3d dR_drx;
+        Eigen::Matrix3d dR_dry;
+        Eigen::Matrix3d dR_drz;
+        Eigen::Vector3d dRp_drx;
+        Eigen::Vector3d dRp_dry;
+        Eigen::Vector3d dRp_drz;
+        double rx = parameters[0][0], ry = parameters[0][1], rz = parameters[0][2];
+        double tx = parameters[0][3], ty = parameters[0][4], tz = parameters[0][5];
+        dR_drx<<0.0, cos(rx) * cos(rz) * sin(ry) + sin(rx) * sin(rz),   -cos(rz) * sin(rx) * sin(ry) + cos(rx) * sin(rz)    , 
+                0.0, -cos(rz) * sin(rx) + cos(rx) * sin(ry) * sin(rz),  -cos(rx) * cos(rz) - sin(rx) * sin(ry) * sin(rz)    , 
+                0.0, cos(rx) * cos(ry),                                 -cos(ry) * sin(rx)                                  ;
+        dR_dry<<-cos(rz) * sin(ry), cos(ry) * cos(rz) * sin(rx),    cos(rx) * cos(ry) * cos(rz)                                     , 
+                -sin(ry) * sin(rz), cos(ry) * sin(rx) * sin(rz),    cos(rx) * cos(ry) * sin(rz)                                     , 
+                -cos(ry),           -sin(rx) * sin(ry),             -cos(rx) * sin(ry)                                              ;   
+        dR_drz<<-cos(ry) * sin(rz),     -cos(rx) * cos(rz) - sin(rx) * sin(ry) * sin(rz), cos(rz) * sin(rx) - cos(rx) * sin(ry) * sin(rz)   , 
+                cos(ry) * cos(rz),      cos(rz) * sin(rx) * sin(ry) - cos(rx) * sin(rz),  cos(rx) * cos(rz) * sin(ry) + sin(rx) * sin(rz)   , 
+                0,                      0,                                                0                                                 ;                            
+        dRp_drx = dR_drx * curr_point;
+        dRp_dry = dR_dry * curr_point;
+        dRp_drz = dR_drz * curr_point;
+        Eigen::Map<Eigen::Matrix<double, 1, 3, Eigen::RowMajor> > dL_dr(jacobians[0]);
+        Eigen::Map<Eigen::Matrix<double, 1, 3, Eigen::RowMajor> > dL_dt(jacobians[0]+3);
+
+        dL_dt = (nu.cross(de) / nu.norm() / de.norm()).transpose();
+        // dL_dt[0] = nu.dot(Eigen::Vector3d::UnitX().cross(de)) / nu.norm();
+        // dL_dt[1] = nu.dot(Eigen::Vector3d::UnitY().cross(de)) / nu.norm();
+        // dL_dt[2] = nu.dot(Eigen::Vector3d::UnitZ().cross(de)) / nu.norm();
+        dL_dr[0] = dL_dt.dot(dRp_drx);
+        dL_dr[1] = dL_dt.dot(dRp_dry);
+        dL_dr[2] = dL_dt.dot(dRp_drz);
+        
+        // dL_dt[2] = 0.0;
+        // dL_dr[0] = 0.0;
+        // dL_dr[1] = 0.0;
     }  
 
     return true;
@@ -55,119 +96,65 @@ SurfNormAnalyticCostFunction::SurfNormAnalyticCostFunction(Eigen::Vector3d curr_
 bool SurfNormAnalyticCostFunction::Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
 {
     // 本次优化前的旋转矩阵
-    Eigen::Map<const Eigen::Quaterniond> q_w_curr(parameters[0]);
+    Eigen::Quaterniond q_w_curr;
     // 本次优化前的平移矩阵
-    Eigen::Map<const Eigen::Vector3d> t_w_curr(parameters[0] + 4);
-    // 通过以上位姿变换参数变换得到的点的坐标
+    Eigen::Vector3d t_w_curr;
+    getPose(parameters, q_w_curr, t_w_curr);
     Eigen::Vector3d point_w = q_w_curr * curr_point + t_w_curr;
     // residuals[0]=平面法向量 . w的向量 + 法向量的反向，这个值越小越好
     residuals[0] = plane_unit_norm.dot(point_w) + negative_OA_dot_norm;
 
-    if(jacobians != NULL)
+    if(jacobians != NULL && jacobians[0] != NULL)
     {
-        if(jacobians[0] != NULL)
-        {
-            Eigen::Matrix3d skew_point_w = skew(point_w);
-            Eigen::Matrix<double, 3, 6> dp_by_se3;
-            dp_by_se3.block<3,3>(0,0) = -skew_point_w;
-            (dp_by_se3.block<3,3>(0, 3)).setIdentity();
-            Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> > J_se3(jacobians[0]);
-            J_se3.setZero();
-            J_se3.block<1,6>(0,0) = plane_unit_norm.transpose() * dp_by_se3;
-   
-        }
+        Eigen::Matrix3d dR_drx;
+        Eigen::Matrix3d dR_dry;
+        Eigen::Matrix3d dR_drz;
+        Eigen::Vector3d dRp_drx;
+        Eigen::Vector3d dRp_dry;
+        Eigen::Vector3d dRp_drz;
+        double rx = parameters[0][0], ry = parameters[0][1], rz = parameters[0][2];
+        double tx = parameters[0][3], ty = parameters[0][4], tz = parameters[0][5];
+        dR_drx<<0.0, cos(rx) * cos(rz) * sin(ry) + sin(rx) * sin(rz),   -cos(rz) * sin(rx) * sin(ry) + cos(rx) * sin(rz)    , 
+                0.0, -cos(rz) * sin(rx) + cos(rx) * sin(ry) * sin(rz),  -cos(rx) * cos(rz) - sin(rx) * sin(ry) * sin(rz)    , 
+                0.0, cos(rx) * cos(ry),                                 -cos(ry) * sin(rx)                                  ;
+        dR_dry<<-cos(rz) * sin(ry), cos(ry) * cos(rz) * sin(rx),    cos(rx) * cos(ry) * cos(rz)                                     , 
+                -sin(ry) * sin(rz), cos(ry) * sin(rx) * sin(rz),    cos(rx) * cos(ry) * sin(rz)                                     , 
+                -cos(ry),           -sin(rx) * sin(ry),             -cos(rx) * sin(ry)                                              ;   
+        dR_drz<<-cos(ry) * sin(rz),     -cos(rx) * cos(rz) - sin(rx) * sin(ry) * sin(rz), cos(rz) * sin(rx) - cos(rx) * sin(ry) * sin(rz)   , 
+                cos(ry) * cos(rz),      cos(rz) * sin(rx) * sin(ry) - cos(rx) * sin(rz),  cos(rx) * cos(rz) * sin(ry) + sin(rx) * sin(rz)   , 
+                0,                      0,                                                0                                                 ;                            
+        dRp_drx = dR_drx * curr_point;
+        dRp_dry = dR_dry * curr_point;
+        dRp_drz = dR_drz * curr_point;
+        Eigen::Map<Eigen::Matrix<double, 1, 3, Eigen::RowMajor> > dL_dr(jacobians[0]);
+        Eigen::Map<Eigen::Matrix<double, 1, 3, Eigen::RowMajor> > dL_dt(jacobians[0]+3);
+        dL_dt = plane_unit_norm.transpose();
+        dL_dr[0] = dL_dt.dot(dRp_drx);
+        dL_dr[1] = dL_dt.dot(dRp_dry);
+        dL_dr[2] = dL_dt.dot(dRp_drz);
+
+        // dL_dr[2] = 0.0;
+        // dL_dt[0] = 0.0;
+        // dL_dt[1] = 0.0;
     }
     return true;
 
 }   
 
-// 输入：当前点x（是四元数），增量（是se3），变换结果x_plus_delta（四元数）
-bool PoseSE3Parameterization::Plus(const double *x, const double *delta, double *x_plus_delta) const
-{
-    Eigen::Map<const Eigen::Vector3d> trans(x + 4);
+void getPose(double const * const *paramEuler, Eigen::Quaterniond& q, Eigen::Vector3d& t){
+    // 围绕x y z轴旋转的角度，对应pitch yaw roll
+    double rx = paramEuler[0][0], ry = paramEuler[0][1], rz = paramEuler[0][2];
+    // x y z方向平移的距离
+    double tx = paramEuler[0][3], ty = paramEuler[0][4], tz = paramEuler[0][5];
+    // Z * Y * X
+    Eigen::Matrix3d R = (
+        Eigen::AngleAxisd(rz, Eigen::Vector3d::UnitZ()) * 
+        Eigen::AngleAxisd(ry, Eigen::Vector3d::UnitY()) * 
+        Eigen::AngleAxisd(rx, Eigen::Vector3d::UnitX())
+        ).toRotationMatrix();
+    Eigen::Vector3d T;
+    T <<    tx, ty, tz;
 
-    Eigen::Quaterniond delta_q;
-    Eigen::Vector3d delta_t;
-    // 将delta分解为q和t两个变换，delta是se3矩阵，
-    getTransformFromSe3(Eigen::Map<const Eigen::Matrix<double,6,1>>(delta), delta_q, delta_t);
-    // 将x变换为四元数
-    Eigen::Map<const Eigen::Quaterniond> quater(x);
-    // 定义变换后的x+delta的q t两个变换
-    Eigen::Map<Eigen::Quaterniond> quater_plus(x_plus_delta);
-    Eigen::Map<Eigen::Vector3d> trans_plus(x_plus_delta + 4);
-
-    // x_plus_delta = x + delta（将delta的变换作用在x上）
-    quater_plus = delta_q * quater;
-    trans_plus = delta_q * trans + delta_t;
-
-    return true;
-}
-
-bool PoseSE3Parameterization::ComputeJacobian(const double *x, double *jacobian) const
-{
-    Eigen::Map<Eigen::Matrix<double, 7, 6, Eigen::RowMajor>> j(jacobian);
-    (j.topRows(6)).setIdentity();
-    (j.bottomRows(1)).setZero();
-
-    return true;
-}
-
-// 将se3转换为变换矩阵q和t
-void getTransformFromSe3(const Eigen::Matrix<double,6,1>& se3, Eigen::Quaterniond& q, Eigen::Vector3d& t){
-    Eigen::Vector3d omega(se3.data());
-    Eigen::Vector3d upsilon(se3.data()+3);
-    Eigen::Matrix3d Omega = skew(omega);
-
-    double theta = omega.norm();
-    double half_theta = 0.5*theta;
-
-    double imag_factor;
-    double real_factor = cos(half_theta);
-    if(theta<1e-10)
-    {
-        double theta_sq = theta*theta;
-        double theta_po4 = theta_sq*theta_sq;
-        imag_factor = 0.5-0.0208333*theta_sq+0.000260417*theta_po4;
-    }
-    else
-    {
-        double sin_half_theta = sin(half_theta);
-        imag_factor = sin_half_theta/theta;
-    }
-
-    q = Eigen::Quaterniond(real_factor, imag_factor*omega.x(), imag_factor*omega.y(), imag_factor*omega.z());
-
-
-    Eigen::Matrix3d J;
-    if (theta<1e-10)
-    {
-        J = q.matrix();
-    }
-    else
-    {
-        Eigen::Matrix3d Omega2 = Omega*Omega;
-        J = (Eigen::Matrix3d::Identity() + (1-cos(theta))/(theta*theta)*Omega + (theta-sin(theta))/(pow(theta,3))*Omega2);
-    }
-
-    t = J*upsilon;
-}
-
-/*
-变换为反对称矩阵
-mat_in = [a, b, c]
-skew_mat = 
-| 0 -c  b|
-| c  0 -a|
-|-b  a  0|
-*/
-Eigen::Matrix<double,3,3> skew(Eigen::Matrix<double,3,1>& mat_in){
-    Eigen::Matrix<double,3,3> skew_mat;
-    skew_mat.setZero();
-    skew_mat(0,1) = -mat_in(2);
-    skew_mat(0,2) =  mat_in(1);
-    skew_mat(1,2) = -mat_in(0);
-    skew_mat(1,0) =  mat_in(2);
-    skew_mat(2,0) = -mat_in(1);
-    skew_mat(2,1) =  mat_in(0);
-    return skew_mat;
+    q = Eigen::Quaterniond(R);
+    t = T;
 }

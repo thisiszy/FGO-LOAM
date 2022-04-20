@@ -63,33 +63,11 @@ void OdomEstimationClass::updatePointsToMap(const pcl::PointCloud<pcl::PointXYZI
                 ceres::Problem problem(problem_options);
 
                 // 设置需要优化的参数
-                problem.AddParameterBlock(parameters, 7, new PoseSE3Parameterization());
-                
-                // 添加线特征项
-                addEdgeCostFactor(downsampledEdgeCloud,laserCloudCornerMap,problem,loss_function);
-
-                // 优化参数设置
-                ceres::Solver::Options options;
-                options.linear_solver_type = ceres::DENSE_QR;
-                options.max_num_iterations = 4;
-                options.minimizer_progress_to_stdout = false;
-                options.check_gradients = false;
-                options.gradient_check_relative_precision = 1e-4;
-                ceres::Solver::Summary summary;
-
-                // solve 会修改parameters，q_w_curr和t_w_curr
-                ceres::Solve(options, &problem, &summary);
-            }
-            {
-                ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
-                ceres::Problem::Options problem_options;
-                // 优化问题
-                ceres::Problem problem(problem_options);
-
-                // 设置需要优化的参数
-                problem.AddParameterBlock(parameters, 7, new PoseSE3Parameterization());
+                problem.AddParameterBlock(paramEuler, 6);
                 
                 // 添加面特征项
+                addEdgeCostFactor(downsampledEdgeCloud,laserCloudCornerMap,problem,loss_function);
+                // 添加线特征项
                 addSurfCostFactor(downsampledSurfCloud,laserCloudSurfMap,problem,loss_function);
 
                 // 优化参数设置
@@ -101,9 +79,35 @@ void OdomEstimationClass::updatePointsToMap(const pcl::PointCloud<pcl::PointXYZI
                 options.gradient_check_relative_precision = 1e-4;
                 ceres::Solver::Summary summary;
 
-                // solve 会修改parameters，q_w_curr和t_w_curr
+                // solve 会修改paramEuler
                 ceres::Solve(options, &problem, &summary);
+                updatePose();
             }
+            // {
+            //     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
+            //     ceres::Problem::Options problem_options;
+            //     // 优化问题
+            //     ceres::Problem problem(problem_options);
+
+            //     // 设置需要优化的参数
+            //     problem.AddParameterBlock(paramEuler, 6);
+                
+            //     // 添加线特征项
+            //     addEdgeCostFactor(downsampledEdgeCloud,laserCloudCornerMap,problem,loss_function);
+
+            //     // 优化参数设置
+            //     ceres::Solver::Options options;
+            //     options.linear_solver_type = ceres::DENSE_QR;
+            //     options.max_num_iterations = 4;
+            //     options.minimizer_progress_to_stdout = false;
+            //     options.check_gradients = false;
+            //     options.gradient_check_relative_precision = 1e-4;
+            //     ceres::Solver::Summary summary;
+
+            //     // solve 会修改paramEuler
+            //     ceres::Solve(options, &problem, &summary);
+            //     updatePose();
+            // }
 
         }
     }else{
@@ -118,9 +122,28 @@ void OdomEstimationClass::updatePointsToMap(const pcl::PointCloud<pcl::PointXYZI
 
 }
 
+void OdomEstimationClass::updatePose(){
+    // 围绕x y z轴旋转的角度，对应pitch yaw roll
+    double rx = paramEuler[0], ry = paramEuler[1], rz = paramEuler[2];
+    // x y z方向平移的距离
+    double tx = paramEuler[3], ty = paramEuler[4], tz = paramEuler[5];
+    // Z * Y * X
+    Eigen::Matrix3d R = (
+        Eigen::AngleAxisd(rz, Eigen::Vector3d::UnitZ()) * 
+        Eigen::AngleAxisd(ry, Eigen::Vector3d::UnitY()) * 
+        Eigen::AngleAxisd(rx, Eigen::Vector3d::UnitX())
+        ).toRotationMatrix();
+    Eigen::Vector3d T;
+    T <<    tx, ty, tz;
+
+    q_w_curr = Eigen::Quaterniond(R);
+    t_w_curr = T;
+}
+
 // 通过当前变换矩阵，将pi变换到po
 void OdomEstimationClass::pointAssociateToMap(pcl::PointXYZI const *const pi, pcl::PointXYZI *const po)
 {
+    Eigen::Isometry3d isoMat;
     Eigen::Vector3d point_curr(pi->x, pi->y, pi->z);
     Eigen::Vector3d point_w = q_w_curr * point_curr + t_w_curr;
     po->x = point_w.x();
@@ -198,7 +221,7 @@ void OdomEstimationClass::addEdgeCostFactor(const pcl::PointCloud<pcl::PointXYZI
 
                 // 添加一个边的误差项
                 ceres::CostFunction *cost_function = new EdgeAnalyticCostFunction(curr_point, point_a, point_b);  
-                problem.AddResidualBlock(cost_function, loss_function, parameters);
+                problem.AddResidualBlock(cost_function, loss_function, paramEuler);
                 corner_num++;   
             }                           
         }
@@ -257,7 +280,7 @@ void OdomEstimationClass::addSurfCostFactor(const pcl::PointCloud<pcl::PointXYZI
             {
                 // 添加误差项
                 ceres::CostFunction *cost_function = new SurfNormAnalyticCostFunction(curr_point, norm, negative_OA_dot_norm);    
-                problem.AddResidualBlock(cost_function, loss_function, parameters);
+                problem.AddResidualBlock(cost_function, loss_function, paramEuler);
 
                 surf_num++;
             }

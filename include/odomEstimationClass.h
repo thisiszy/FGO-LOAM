@@ -51,10 +51,10 @@ class OdomEstimationClass
 		// 面特征点map
 		pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudSurfMap;
 	private:
-		//optimization variable，p[0-3]旋转矩阵，p[4-6]平移矩阵
-		double parameters[7] = {0, 0, 0, 1, 0, 0, 0};
-		Eigen::Map<Eigen::Quaterniond> q_w_curr = Eigen::Map<Eigen::Quaterniond>(parameters);
-		Eigen::Map<Eigen::Vector3d> t_w_curr = Eigen::Map<Eigen::Vector3d>(parameters + 4);
+		// rx ry rz x y z
+		double paramEuler[6] = {0, 0, 0, 0, 0, 0};
+		Eigen::Quaterniond q_w_curr;
+		Eigen::Vector3d t_w_curr;
 
 		Eigen::Isometry3d last_odom;
 
@@ -80,6 +80,7 @@ class OdomEstimationClass
 		void addPointsToMap(const pcl::PointCloud<pcl::PointXYZI>::Ptr& downsampledEdgeCloud, const pcl::PointCloud<pcl::PointXYZI>::Ptr& downsampledSurfCloud);
 		void pointAssociateToMap(pcl::PointXYZI const *const pi, pcl::PointXYZI *const po);
 		void downSamplingToMap(const pcl::PointCloud<pcl::PointXYZI>::Ptr& edge_pc_in, pcl::PointCloud<pcl::PointXYZI>::Ptr& edge_pc_out, const pcl::PointCloud<pcl::PointXYZI>::Ptr& surf_pc_in, pcl::PointCloud<pcl::PointXYZI>::Ptr& surf_pc_out);
+		void updatePose();
 };
 
 #endif // _ODOM_ESTIMATION_CLASS_H_
