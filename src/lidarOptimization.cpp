@@ -78,9 +78,9 @@ bool EdgeAnalyticCostFunction::Evaluate(double const *const *parameters, double 
         dL_dr[1] = dL_dt.dot(dRp_dry);
         dL_dr[2] = dL_dt.dot(dRp_drz);
         
-        // dL_dt[2] = 0.0;
-        // dL_dr[0] = 0.0;
-        // dL_dr[1] = 0.0;
+        dL_dt[2] = 0.0;
+        dL_dr[0] = 0.0;
+        dL_dr[1] = 0.0;
     }  
 
     return true;
@@ -133,9 +133,9 @@ bool SurfNormAnalyticCostFunction::Evaluate(double const *const *parameters, dou
         dL_dr[1] = dL_dt.dot(dRp_dry);
         dL_dr[2] = dL_dt.dot(dRp_drz);
 
-        // dL_dr[2] = 0.0;
-        // dL_dt[0] = 0.0;
-        // dL_dt[1] = 0.0;
+        dL_dr[2] = 0.0;
+        dL_dt[0] = 0.0;
+        dL_dt[1] = 0.0;
     }
     return true;
 

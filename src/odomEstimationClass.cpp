@@ -67,8 +67,6 @@ void OdomEstimationClass::updatePointsToMap(const pcl::PointCloud<pcl::PointXYZI
                 
                 // 添加面特征项
                 addEdgeCostFactor(downsampledEdgeCloud,laserCloudCornerMap,problem,loss_function);
-                // 添加线特征项
-                addSurfCostFactor(downsampledSurfCloud,laserCloudSurfMap,problem,loss_function);
 
                 // 优化参数设置
                 ceres::Solver::Options options;
@@ -83,31 +81,33 @@ void OdomEstimationClass::updatePointsToMap(const pcl::PointCloud<pcl::PointXYZI
                 ceres::Solve(options, &problem, &summary);
                 updatePose();
             }
-            // {
-            //     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
-            //     ceres::Problem::Options problem_options;
-            //     // 优化问题
-            //     ceres::Problem problem(problem_options);
+        }
+        for (int iterCount = 0; iterCount < optimization_count; iterCount++){
+            {
+                ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
+                ceres::Problem::Options problem_options;
+                // 优化问题
+                ceres::Problem problem(problem_options);
 
-            //     // 设置需要优化的参数
-            //     problem.AddParameterBlock(paramEuler, 6);
+                // 设置需要优化的参数
+                problem.AddParameterBlock(paramEuler, 6);
                 
-            //     // 添加线特征项
-            //     addEdgeCostFactor(downsampledEdgeCloud,laserCloudCornerMap,problem,loss_function);
+                // 添加线特征项
+                addEdgeCostFactor(downsampledEdgeCloud,laserCloudCornerMap,problem,loss_function);
 
-            //     // 优化参数设置
-            //     ceres::Solver::Options options;
-            //     options.linear_solver_type = ceres::DENSE_QR;
-            //     options.max_num_iterations = 4;
-            //     options.minimizer_progress_to_stdout = false;
-            //     options.check_gradients = false;
-            //     options.gradient_check_relative_precision = 1e-4;
-            //     ceres::Solver::Summary summary;
+                // 优化参数设置
+                ceres::Solver::Options options;
+                options.linear_solver_type = ceres::DENSE_QR;
+                options.max_num_iterations = 4;
+                options.minimizer_progress_to_stdout = false;
+                options.check_gradients = false;
+                options.gradient_check_relative_precision = 1e-4;
+                ceres::Solver::Summary summary;
 
-            //     // solve 会修改paramEuler
-            //     ceres::Solve(options, &problem, &summary);
-            //     updatePose();
-            // }
+                // solve 会修改paramEuler
+                ceres::Solve(options, &problem, &summary);
+                updatePose();
+            }
 
         }
     }else{
@@ -122,6 +122,7 @@ void OdomEstimationClass::updatePointsToMap(const pcl::PointCloud<pcl::PointXYZI
 
 }
 
+// 根据当前欧拉角的参数更新旋转四元数和平移矩阵
 void OdomEstimationClass::updatePose(){
     // 围绕x y z轴旋转的角度，对应pitch yaw roll
     double rx = paramEuler[0], ry = paramEuler[1], rz = paramEuler[2];
