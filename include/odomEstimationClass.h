@@ -33,6 +33,89 @@
 #include "lidarOptimization.h"
 #include <ros/ros.h>
 
+#ifdef NANOFLANN
+#include <scancontext/nanoflann.hpp>
+template <typename Derived>
+struct PointCloudAdaptor
+{
+
+	using PC2KD = PointCloudAdaptor<pcl::PointCloud<pcl::PointXYZI>::Ptr>;
+	using kd_treee_t = nanoflann::KDTreeSingleIndexAdaptor<nanoflann::L2_Simple_Adaptor<float, PC2KD>, PC2KD, 3>;
+
+    const Derived& obj;  //!< A const ref to the data set origin
+
+    /// The constructor that sets the data set source
+    // PointCloudAdaptor(const Derived& obj_) : obj(obj_) {}
+
+	kd_treee_t* index; //! The kd-tree index for the user to call its methods as usual with any other FLANN index.
+
+	/// Constructor: takes a const ref to the vector of vectors object with the data points
+	PointCloudAdaptor(const Derived &obj_) : obj(obj_)
+	{
+		index = new kd_treee_t( 3, *this /* adaptor */, {40} );
+		index->buildIndex();
+	}
+
+	~PointCloudAdaptor() {
+		delete index;
+	}
+
+	// inline void setInputCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr &cloudPoints){
+	// 	delete index;
+	// 	index = new kd_treee_t( 3, *this /* adaptor */, {30} );
+	// 	obj = cloudPoints;
+	// 	index->buildIndex();
+	// }
+
+	inline void nearestKSearch(pcl::PointXYZI &point, int searchNum, std::vector<size_t> &pointSearchInd, std::vector<float> &pointSearchSqDis){
+		pointSearchInd.resize(searchNum);
+		pointSearchSqDis.resize(searchNum);
+        const float query_pt[3] = {point.x, point.y, point.z};
+		index->knnSearch(query_pt, searchNum, &pointSearchInd[0], &pointSearchSqDis[0]);
+	}
+
+    /// CRTP helper method
+    inline const Derived& derived() const { return obj; }
+
+    // Must return the number of data points
+    inline size_t kdtree_get_point_count() const
+    {
+        return derived()->points.size();
+    }
+
+    // Returns the dim'th component of the idx'th point in the class:
+    // Since this is inlined and the "dim" argument is typically an immediate
+    // value, the
+    //  "if/else's" are actually solved at compile time.
+    inline float kdtree_get_pt(const size_t idx, const size_t dim) const
+    {
+        if (dim == 0)
+            return derived()->points[idx].x;
+        else if (dim == 1)
+            return derived()->points[idx].y;
+        else
+            return derived()->points[idx].z;
+    }
+
+    // Optional bounding-box computation: return false to default to a standard
+    // bbox computation loop.
+    //   Return true if the BBOX was already computed by the class and returned
+    //   in "bb" so it can be avoided to redo it again. Look at bb.size() to
+    //   find out the expected dimensionality (e.g. 2 or 3 for point clouds)
+    template <class BBOX>
+    bool kdtree_get_bbox(BBOX& /*bb*/) const
+    {
+        return false;
+    }
+
+};  // end of PointCloudAdaptor
+
+
+using PC2KD = PointCloudAdaptor<pcl::PointCloud<pcl::PointXYZI>::Ptr>;
+using kd_treee_t = nanoflann::KDTreeSingleIndexAdaptor<nanoflann::L2_Simple_Adaptor<float, PC2KD>, PC2KD, 3>;
+
+#endif
+
 class OdomEstimationClass 
 {
 
@@ -59,10 +142,17 @@ class OdomEstimationClass
 		Eigen::Isometry3d last_odom;
 
 		//kd-tree
-		// 线特征地图中的点
+		#ifdef NANOFLANN
+		// 线特征地图
+		std::unique_ptr<PC2KD> kdtreeEdgeMap;
+		// 面特征地图
+		std::unique_ptr<PC2KD> kdtreeSurfMap;
+		#else
+		// 线特征地图
 		pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtreeEdgeMap;
-		// 面特征地图中的点
+		// 面特征地图
 		pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtreeSurfMap;
+		#endif
 
 		//points downsampling before add to map
 		pcl::VoxelGrid<pcl::PointXYZI> downSizeFilterEdge;

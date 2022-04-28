@@ -14,8 +14,11 @@ void OdomEstimationClass::init(lidar::Lidar lidar_param, double map_resolution){
     downSizeFilterSurf.setLeafSize(map_resolution * 2, map_resolution * 2, map_resolution * 2);
 
     //kd-tree
+    #ifdef NANOFLANN
+    #else
     kdtreeEdgeMap = pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr(new pcl::KdTreeFLANN<pcl::PointXYZI>());
     kdtreeSurfMap = pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr(new pcl::KdTreeFLANN<pcl::PointXYZI>());
+    #endif
 
     odom = Eigen::Isometry3d::Identity();
     last_odom = Eigen::Isometry3d::Identity();
@@ -51,8 +54,15 @@ void OdomEstimationClass::updatePointsToMap(const pcl::PointCloud<pcl::PointXYZI
     downSamplingToMap(edge_in,downsampledEdgeCloud,surf_in,downsampledSurfCloud);
     //ROS_WARN("point nyum%d,%d",(int)downsampledEdgeCloud->points.size(), (int)downsampledSurfCloud->points.size());
     if(laserCloudCornerMap->points.size()>10 && laserCloudSurfMap->points.size()>50){
+        #ifdef NANOFLANN
+        kdtreeEdgeMap.reset();
+        kdtreeEdgeMap = std::make_unique<PC2KD>(laserCloudCornerMap);
+        kdtreeSurfMap.reset();
+        kdtreeSurfMap = std::make_unique<PC2KD>(laserCloudSurfMap);
+        #else
         kdtreeEdgeMap->setInputCloud(laserCloudCornerMap);
         kdtreeSurfMap->setInputCloud(laserCloudSurfMap);
+        #endif
 
         // 优化optimization_count轮（每次会对parameter在前一次基础上进行优化）
         for (int iterCount = 0; iterCount < optimization_count; iterCount++){
@@ -172,7 +182,11 @@ void OdomEstimationClass::addEdgeCostFactor(const pcl::PointCloud<pcl::PointXYZI
         pointAssociateToMap(&(pc_in->points[i]), &point_temp);
 
         // k临近查找到的点的index
+        #ifdef NANOFLANN
+        std::vector<size_t> pointSearchInd;
+        #else
         std::vector<int> pointSearchInd;
+        #endif
         // k临近查找到的点的距离
         std::vector<float> pointSearchSqDis;
         // 搜索point_temp周围的5个点
@@ -239,7 +253,11 @@ void OdomEstimationClass::addSurfCostFactor(const pcl::PointCloud<pcl::PointXYZI
     {
         pcl::PointXYZI point_temp;
         pointAssociateToMap(&(pc_in->points[i]), &point_temp);
+        #ifdef NANOFLANN
+        std::vector<size_t> pointSearchInd;
+        #else
         std::vector<int> pointSearchInd;
+        #endif
         std::vector<float> pointSearchSqDis;
         // 在经过变换之后的面特征地图中查找最近的5个点
         kdtreeSurfMap->nearestKSearch(point_temp, 5, pointSearchInd, pointSearchSqDis);
