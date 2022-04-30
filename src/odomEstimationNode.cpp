@@ -36,8 +36,9 @@ lidar::Lidar lidar_param;
 ros::Publisher pubLaserOdometry;
 
 // dt文件
-// std::ofstream dt_file;
-FILE *dt_file;
+// std::ofstream dt_file_kitti;
+FILE *dt_file_kitti;
+FILE *dt_file_tum;
 
 void velodyneSurfHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 {
@@ -98,13 +99,8 @@ void odom_estimation(){
                 total_frame++;
                 float time_temp = elapsed_seconds.count() * 1000;
                 total_time+=time_temp;
-                ROS_INFO("average odom estimation time %f ms \n \n", total_time/total_frame);
+                // ROS_INFO("average odom estimation time %f ms \n \n", total_time/total_frame);
             }
-            Eigen::Isometry3d T = odomEstimation.odom;
-                fprintf(dt_file, "%f %f %f %f %f %f %f %f %f %f %f %f\n", 
-                    T(0,0), T(0,1), T(0,2), T(0,3),
-                    T(1,0), T(1,1), T(1,2), T(1,3),
-                    T(2,0), T(2,1), T(2,2), T(2,3));
 
             // 当前位姿相对于初始位姿的变换
             Eigen::Quaterniond q_current(odomEstimation.odom.rotation());
@@ -133,6 +129,15 @@ void odom_estimation(){
             laserOdometry.pose.pose.position.z = t_current.z();
             pubLaserOdometry.publish(laserOdometry);
 
+            Eigen::Isometry3d T = odomEstimation.odom;
+            fprintf(dt_file_kitti, "%f %f %f %f %f %f %f %f %f %f %f %f\n", 
+                T(0,0), T(0,1), T(0,2), T(0,3),
+                T(1,0), T(1,1), T(1,2), T(1,3),
+                T(2,0), T(2,1), T(2,2), T(2,3));
+            fprintf(dt_file_tum, "%f %f %f %f %f %f %f %f\n", 
+                pointcloud_time.toSec(),
+                t_current.x(), t_current.x(), t_current.x(), 
+                q_current.x(), q_current.y(), q_current.z(), q_current.w());
         }
         //sleep 2 ms every time
         std::chrono::milliseconds dura(2);
@@ -158,7 +163,7 @@ int main(int argc, char **argv)
     nh.getParam("/min_dis", min_dis);
     nh.getParam("/scan_line", scan_line);
     nh.getParam("/map_resolution", map_resolution);
-    nh.getParam("/dt_file_loc", dt_file_loc);
+    nh.getParam("/dt_folder", dt_file_loc);
 
     lidar_param.setScanPeriod(scan_period);
     lidar_param.setVerticalAngle(vertical_angle);
@@ -175,13 +180,16 @@ int main(int argc, char **argv)
 
     ROS_INFO("\033[1;32m---->\033[0m Odometey Started.");
 
-    // dt_file.open(dt_file_loc);
-    dt_file = fopen(dt_file_loc.c_str(), "w");
+    // dt_file_kitti.open(dt_file_loc);
+    dt_file_kitti = fopen((dt_file_loc+"dt_kitti.txt").c_str(), "w");
+    dt_file_tum = fopen((dt_file_loc+"dt_tum.txt").c_str(), "w");
 
     ros::spin();
 
-    // dt_file.close();
-    fclose(dt_file);
+    printf("average odom estimation time %f ms \n \n", total_time/total_frame);
+    // dt_file_kitti.close();
+    fclose(dt_file_kitti);
+    fclose(dt_file_tum);
 
     return 0;
 }

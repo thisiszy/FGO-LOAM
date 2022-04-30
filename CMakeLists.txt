@@ -4,7 +4,7 @@ project(lcloam)
 
 # set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 set(CMAKE_CXX_FLAGS_DEBUG "-DNANOFLANN")
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 SET(CMAKE_BUILD_TYPE "Debug")
 
@@ -31,8 +31,11 @@ if(NOT EIGEN3_FOUND)
 else()
   set(EIGEN3_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIR})
 endif()
+
 find_package(PCL REQUIRED)
 find_package(Ceres REQUIRED)
+find_package(GTSAM REQUIRED)
+find_package(Boost REQUIRED COMPONENTS timer thread serialization chrono)
 
 include_directories(
   include
@@ -40,12 +43,14 @@ include_directories(
   ${PCL_INCLUDE_DIRS}
   ${CERES_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
+  ${GTSAM_INCLUDE_DIR}
 )
 
 link_directories(
   include
   ${PCL_LIBRARY_DIRS}
   ${CERES_LIBRARY_DIRS}
+  ${GTSAM_LIBRARY_DIR}
 )
 
 
@@ -66,3 +71,5 @@ target_link_libraries(lcloam_odom_estimation_node ${EIGEN3_LIBRARIES} ${catkin_L
 add_executable(lcloam_laser_mapping_node src/laserMappingNode.cpp src/laserMappingClass.cpp src/lidar.cpp)
 target_link_libraries(lcloam_laser_mapping_node ${EIGEN3_LIBRARIES} ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${CERES_LIBRARIES})
 
+add_executable(lcloam_backend_opt_node src/laserPosegraphOptimization.cpp include/scancontext/Scancontext.cpp)
+target_link_libraries(lcloam_backend_opt_node ${EIGEN3_LIBRARIES} ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${CERES_LIBRARIES} gtsam)
