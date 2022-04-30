@@ -2,14 +2,11 @@ import os
 import sys
 import subprocess
 import time
-rosbag_has_played = 1
     
 def detect_active():
-    global rosbag_has_played
     val = os.popen("rosnode list")
     for line in val.readlines():
         if("/rosbag_play" in line.split()[0]):
-            rosbag_has_played = 0
             return True
     return False
 def get_ape(seq, filename):
@@ -30,7 +27,6 @@ if __name__ == '__main__':
     dataset += seq
     print(dataset)
     print(output_folder)
-    rosbag_has_played = 1
 
     len_dic = {"00":4541, "01":1101, "02":4661, "03":801, "04":271,
                "05":2761, "06":1101, "07":1101, "08":4071, "09":1591, "10":1201}
@@ -41,13 +37,12 @@ if __name__ == '__main__':
         result_file_name = output_folder + "dt_kitti.txt"
         sleep_est = len_dic[seq] * 30 / 1000
         print("seq: ",seq," start")
-        launch_proc = subprocess.Popen(["roslaunch", "lcloam", "lcloam_velodyne.launch", "output_folder:="+output_folder, "bag_path:="+dataset+".bag"], shell=False)
+        launch_proc = subprocess.Popen(["roslaunch", "lcloam", "lcloam_eval.launch", "output_folder:="+output_folder, "bag_path:="+dataset+".bag"], shell=False)
         time.sleep(10)
-        while(detect_active() or rosbag_has_played):
+        while(detect_active()):
             print("rosbag has played for {0} seconds...".format(str(time.time()-start_time)))
             time.sleep(3)
         time.sleep(sleep_est + fail * 100)
-        rosbag_has_played = 1
         print("----seq end-----")
         launch_proc.terminate()
         time.sleep(10)
