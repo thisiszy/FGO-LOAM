@@ -76,19 +76,19 @@ void laser_processing(){
             pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_not_ground(new pcl::PointCloud<pcl::PointXYZI>());
             double time_taken;
             PatchworkGroundSeg.estimate_ground(*pointcloud_in, *pointcloud_ground, *pointcloud_not_ground, time_taken);
+            // std::sort(pointcloud_ground->points.begin(), pointcloud_ground->points.end(), [](const pcl::PointXYZI & a, const pcl::PointXYZI & b)
+            // { 
+            //     return a.intensity < b.intensity; 
+            // });
             // 将被patchwork打乱之后的点云重新编号
-            std::sort(pointcloud_ground->points.begin(), pointcloud_ground->points.end(), [](const pcl::PointXYZI & a, const pcl::PointXYZI & b)
-            { 
-                return a.intensity < b.intensity; 
-            });
             std::sort(pointcloud_not_ground->points.begin(), pointcloud_not_ground->points.end(), [](const pcl::PointXYZI & a, const pcl::PointXYZI & b)
             { 
                 return a.intensity < b.intensity; 
             });
-            // 标记ground点云
-            for(auto &point : pointcloud_ground->points){
-                point.intensity += 0.5;
-            }
+            // // 标记ground点云
+            // for(auto &point : pointcloud_ground->points){
+            //     point.intensity += 0.5;
+            // }
 
             pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_edge(new pcl::PointCloud<pcl::PointXYZI>());          
             pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_surf(new pcl::PointCloud<pcl::PointXYZI>());
@@ -99,7 +99,7 @@ void laser_processing(){
             total_frame++;
             float time_temp = elapsed_seconds.count() * 1000;
             total_time+=time_temp;
-            ROS_INFO("average laser processing time %f ms \n \n", total_time/total_frame);
+            // ROS_INFO("average laser processing time %f ms \n \n", total_time/total_frame);
 
             sensor_msgs::PointCloud2 laserCloudFilteredMsg;
             pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_filtered(new pcl::PointCloud<pcl::PointXYZI>());  
@@ -187,6 +187,8 @@ int main(int argc, char **argv)
     ROS_INFO("\033[1;32m---->\033[0m Laser Processing Started.");
 
     ros::spin();
+
+    printf("average laser processing time %f ms \n \n", total_time/total_frame);
 
     return 0;
 }

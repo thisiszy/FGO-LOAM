@@ -12,7 +12,6 @@ void LaserProcessingClass::init(lidar::Lidar lidar_param_in){
 // Lego Loam的近似实现
 void LaserProcessingClass::featureExtraction(const pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_ground, const pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_not_ground, pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_out_edge, pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_out_surf){
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_temp;          
-    // *pc_temp += *pc_ground + *pc_not_ground;
     pc_temp = pc_not_ground;
 
     std::vector<int> indices;
