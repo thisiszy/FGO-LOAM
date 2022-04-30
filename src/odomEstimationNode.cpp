@@ -136,7 +136,7 @@ void odom_estimation(){
                 T(2,0), T(2,1), T(2,2), T(2,3));
             fprintf(dt_file_tum, "%f %f %f %f %f %f %f %f\n", 
                 pointcloud_time.toSec(),
-                t_current.x(), t_current.x(), t_current.x(), 
+                t_current.x(), t_current.y(), t_current.z(), 
                 q_current.x(), q_current.y(), q_current.z(), q_current.w());
         }
         //sleep 2 ms every time
