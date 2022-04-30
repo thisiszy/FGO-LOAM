@@ -76,7 +76,7 @@ void OdomEstimationClass::updatePointsToMap(const pcl::PointCloud<pcl::PointXYZI
                 problem.AddParameterBlock(paramEuler, 6);
                 
                 // 添加面特征项
-                addEdgeCostFactor(downsampledEdgeCloud,laserCloudCornerMap,problem,loss_function);
+                addSurfCostFactor(downsampledSurfCloud,laserCloudSurfMap,problem,loss_function);
 
                 // 优化参数设置
                 ceres::Solver::Options options;
