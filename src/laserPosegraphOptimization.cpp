@@ -918,8 +918,9 @@ int main(int argc, char **argv)
 	ros::NodeHandle nh;
 
     // save directories 
-	nh.param<std::string>("save_directory", save_directory, "/"); // pose assignment every k m move 
+	nh.param<std::string>("dt_folder", save_directory, "/"); // pose assignment every k m move 
 
+    save_directory += "aft_opt/";
     pgKITTIformat = save_directory + "optimized_poses_kitti.txt";
     pgTUMformat = save_directory + "optimized_poses_tum.txt";
     odomKITTIformat = save_directory + "odom_poses.txt";

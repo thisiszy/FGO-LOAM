@@ -25,7 +25,6 @@
     <param name="max_dis" type="double" value="90.0" />
     <param name="min_dis" type="double" value="0.5" />
     <param name="dt_folder" type="string" value="$(find lcloam)/test/dt/" />
-    <param name="save_directory" type="string" value="$(find lcloam)/test/backend/" />
 
     <!--- -->
     <node pkg="lcloam" type="lcloam_odom_estimation_node" name="lcloam_odom_estimation_node" output="screen"/>
