@@ -181,6 +181,7 @@ int main(int argc, char **argv)
     ROS_INFO("\033[1;32m---->\033[0m Odometey Started.");
 
     // dt_file_kitti.open(dt_file_loc);
+    system((std::string("mkdir -p ") + dt_file_loc).c_str());
     dt_file_kitti = fopen((dt_file_loc+"dt_kitti.txt").c_str(), "w");
     dt_file_tum = fopen((dt_file_loc+"dt_tum.txt").c_str(), "w");
 
