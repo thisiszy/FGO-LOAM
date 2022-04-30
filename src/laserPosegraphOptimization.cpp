@@ -660,7 +660,6 @@ void process_pg()
                 isNowKeyFrame = true;
                 translationAccumulated = 0.0; // reset 
                 rotaionAccumulated = 0.0; // reset 
-                ROS_INFO("Get key frame");
             } else {
                 isNowKeyFrame = false;
             }
@@ -711,7 +710,7 @@ void process_pg()
 
                 gtSAMgraphMade = true; 
 
-                cout << "posegraph prior node " << init_node_idx << " added" << endl;
+                // cout << "posegraph prior node " << init_node_idx << " added" << endl;
             } else /* consecutive node (and odom factor) after the prior added */ { // == keyframePoses.size() > 1 
                 gtsam::Pose3 poseFrom = Pose6DtoGTSAMPose3(keyframePoses.at(prev_node_idx));
                 gtsam::Pose3 poseTo = Pose6DtoGTSAMPose3(keyframePoses.at(curr_node_idx));
@@ -858,13 +857,12 @@ void process_isam(void)
         if( gtSAMgraphMade ) {
             mtxPosegraph.lock();
             runISAM2opt();
-            cout << "running isam2 optimization ..." << endl;
+            // cout << "running isam2 optimization ..." << endl;
             mtxPosegraph.unlock();
 
             saveOptimizedVerticesKITTIformat(isamCurrentEstimate, pgKITTIformat); // pose
             saveOptimizedVerticesTUMformat(isamCurrentEstimate, pgTUMformat); // save tum file
             saveOdometryVerticesKITTIformat(odomKITTIformat); // pose
-            saveGTSAMgraphG2oFormat(isamCurrentEstimate);
         }
     }
 }
@@ -986,6 +984,8 @@ int main(int argc, char **argv)
     ROS_INFO("\033[1;32m---->\033[0m Backend Optimization Started.");
 
  	ros::spin();
+
+    saveGTSAMgraphG2oFormat(isamCurrentEstimate);
 
 	return 0;
 }
