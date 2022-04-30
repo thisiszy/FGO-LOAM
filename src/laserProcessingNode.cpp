@@ -188,7 +188,7 @@ int main(int argc, char **argv)
 
     ros::spin();
 
-    printf("average laser processing time %f ms \n \n", total_time/total_frame);
+    printf("\033[1;33maverage laser processing time %f ms\033[0m \n \n", total_time/total_frame);
 
     return 0;
 }

@@ -186,7 +186,7 @@ int main(int argc, char **argv)
 
     ros::spin();
 
-    printf("average odom estimation time %f ms \n \n", total_time/total_frame);
+    printf("\033[1;33average odom estimation time %f ms\033[0m \n \n", total_time/total_frame);
     // dt_file_kitti.close();
     fclose(dt_file_kitti);
     fclose(dt_file_tum);

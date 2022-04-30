@@ -24,7 +24,9 @@
     <param name="map_resolution" type="double" value="0.2" />
     <param name="max_dis" type="double" value="90.0" />
     <param name="min_dis" type="double" value="0.5" />
-    <param name="dt_folder" type="string" value="$(find lcloam)/test/dt/" />
+
+    <arg name="output_folder" default="$(find lcloam)/test/dt/"/>
+    <param name="dt_folder" type="string" value="$(arg output_folder)"/>
 
     <!--- -->
     <node pkg="lcloam" type="lcloam_odom_estimation_node" name="lcloam_odom_estimation_node" output="screen"/>
