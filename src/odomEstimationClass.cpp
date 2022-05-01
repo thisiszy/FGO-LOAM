@@ -91,8 +91,8 @@ void OdomEstimationClass::updatePointsToMap(const pcl::PointCloud<pcl::PointXYZI
                 ceres::Solve(options, &problem, &summary);
                 updatePose();
             }
-        }
-        for (int iterCount = 0; iterCount < optimization_count; iterCount++){
+        // }
+        // for (int iterCount = 0; iterCount < optimization_count; iterCount++){
             {
                 ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
                 ceres::Problem::Options problem_options;

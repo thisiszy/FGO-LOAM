@@ -1,4 +1,5 @@
-test/dt/*.txt
+test/dt/**
+!test/dt/.gitignore
 *.bak
 test/aft_opt/**
 !test/aft_opt/.gitignore

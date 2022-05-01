@@ -119,7 +119,7 @@ void LaserProcessingClass::featureExtraction(const pcl::PointCloud<pcl::PointXYZ
 
     }
     // 将地面中的点全部作为平面点，同时加上非地面点中提取出的平面点
-    *pc_out_surf += *pc_ground;
+    // *pc_out_surf += *pc_ground;
 
 }
 
@@ -154,8 +154,8 @@ void LaserProcessingClass::featureExtractionFromSector(const pcl::PointCloud<pcl
             //标记已经选中的点
             picked_points.push_back(ind);
 
-            // 保证一个sector中最多只有20个线特征
-            if (largestPickedNum <= 20){
+            // 保证一个sector中最多只有30个线特征
+            if (largestPickedNum <= 30){
                 pc_out_edge->push_back(pc_in->points[ind]);
                 point_info_count++;
             }else{

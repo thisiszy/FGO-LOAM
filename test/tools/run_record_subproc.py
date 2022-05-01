@@ -49,11 +49,14 @@ if __name__ == '__main__':
         val = os.popen("wc -l "+result_file_name)
         tmp = val.readline()
         if(tmp.split()[0] == str(len_dic[seq])):
+            time.sleep(10)
             exit()
         else:
             fail += 1
             print("\033[1;32mERROR once\033[0m")
+            time.sleep(10)
 
-        if(fail > 1):
+        if(fail > 2):
             print("\033[0;31;40mERROR 2 times\033[0m")
+            time.sleep(10)
             exit()
