@@ -85,6 +85,7 @@ void OdomEstimationClass::updatePointsToMap(const pcl::PointCloud<pcl::PointXYZI
                 options.minimizer_progress_to_stdout = false;
                 options.check_gradients = false;
                 options.gradient_check_relative_precision = 1e-4;
+                options.trust_region_strategy_type = ceres::DOGLEG;
                 ceres::Solver::Summary summary;
 
                 // solve 会修改paramEuler
@@ -111,6 +112,7 @@ void OdomEstimationClass::updatePointsToMap(const pcl::PointCloud<pcl::PointXYZI
                 options.max_num_iterations = 4;
                 options.minimizer_progress_to_stdout = false;
                 options.check_gradients = false;
+                options.trust_region_strategy_type = ceres::DOGLEG;
                 options.gradient_check_relative_precision = 1e-4;
                 ceres::Solver::Summary summary;
 
