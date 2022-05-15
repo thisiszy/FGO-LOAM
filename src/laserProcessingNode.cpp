@@ -101,6 +101,7 @@ void laser_processing(){
             total_time+=time_temp;
             if(total_frame % 10 == 0){
                 ROS_INFO("average laser processing time %f ms \n \n", total_time/total_frame);
+                ROS_INFO("%d ground points, %d non-ground surface points \n \n", pointcloud_ground->size(), pointcloud_surf->size()-pointcloud_ground->size());
                 ROS_INFO("%d edge points, %d surface points, total %d points \n \n", pointcloud_edge->size(), pointcloud_surf->size(), pointcloud_edge->size()+pointcloud_surf->size());
             }
 
