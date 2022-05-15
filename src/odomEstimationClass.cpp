@@ -85,15 +85,14 @@ void OdomEstimationClass::updatePointsToMap(const pcl::PointCloud<pcl::PointXYZI
                 options.minimizer_progress_to_stdout = false;
                 options.check_gradients = false;
                 options.gradient_check_relative_precision = 1e-4;
-                options.trust_region_strategy_type = ceres::DOGLEG;
                 ceres::Solver::Summary summary;
 
                 // solve 会修改paramEuler
                 ceres::Solve(options, &problem, &summary);
                 updatePose();
             }
-        // }
-        // for (int iterCount = 0; iterCount < optimization_count; iterCount++){
+        }
+        for (int iterCount = 0; iterCount < optimization_count; iterCount++){
             {
                 ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
                 ceres::Problem::Options problem_options;
@@ -112,7 +111,6 @@ void OdomEstimationClass::updatePointsToMap(const pcl::PointCloud<pcl::PointXYZI
                 options.max_num_iterations = 4;
                 options.minimizer_progress_to_stdout = false;
                 options.check_gradients = false;
-                options.trust_region_strategy_type = ceres::DOGLEG;
                 options.gradient_check_relative_precision = 1e-4;
                 ceres::Solver::Summary summary;
 

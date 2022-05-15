@@ -37,7 +37,7 @@ ros::Publisher pubEdgePoints;
 ros::Publisher pubSurfPoints;
 ros::Publisher pubLaserCloudFiltered;
 // ros::Publisher pubGroundPoints;
-// ros::Publisher pubNotGroundPoints;
+ros::Publisher pubNotGroundPoints;
 PatchWork<pcl::PointXYZI> PatchworkGroundSeg;
 
 void velodyneHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
@@ -99,8 +99,10 @@ void laser_processing(){
             total_frame++;
             float time_temp = elapsed_seconds.count() * 1000;
             total_time+=time_temp;
-            if(total_frame % 100 == 0)
+            if(total_frame % 10 == 0){
                 ROS_INFO("average laser processing time %f ms \n \n", total_time/total_frame);
+                ROS_INFO("%d edge points, %d surface points, total %d points \n \n", pointcloud_edge->size(), pointcloud_surf->size(), pointcloud_edge->size()+pointcloud_surf->size());
+            }
 
             sensor_msgs::PointCloud2 laserCloudFilteredMsg;
             pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_filtered(new pcl::PointCloud<pcl::PointXYZI>());  
@@ -132,11 +134,11 @@ void laser_processing(){
             // pubGroundPoints.publish(surfGroundMsg);
 
 
-            // sensor_msgs::PointCloud2 surfNotGroundMsg;
-            // pcl::toROSMsg(*pointcloud_not_ground, surfNotGroundMsg);
-            // surfNotGroundMsg.header.stamp = pointcloud_time;
-            // surfNotGroundMsg.header.frame_id = "base_link";
-            // pubNotGroundPoints.publish(surfNotGroundMsg);
+            sensor_msgs::PointCloud2 surfNotGroundMsg;
+            pcl::toROSMsg(*pointcloud_not_ground, surfNotGroundMsg);
+            surfNotGroundMsg.header.stamp = pointcloud_time;
+            surfNotGroundMsg.header.frame_id = "base_link";
+            pubNotGroundPoints.publish(surfNotGroundMsg);
 
         }
         //sleep 2 ms every time
@@ -181,7 +183,7 @@ int main(int argc, char **argv)
 
     // pubGroundPoints = nh.advertise<sensor_msgs::PointCloud2>("/laser_ground", 100); 
 
-    // pubNotGroundPoints = nh.advertise<sensor_msgs::PointCloud2>("/laser_not_ground", 100); 
+    pubNotGroundPoints = nh.advertise<sensor_msgs::PointCloud2>("/laser_not_ground", 100); 
 
     std::thread laser_processing_process{laser_processing};
 

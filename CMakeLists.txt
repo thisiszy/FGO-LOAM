@@ -3,10 +3,10 @@ cmake_minimum_required(VERSION 2.8.3)
 project(lcloam)
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
-set(CMAKE_CXX_FLAGS_DEBUG "-DNANOFLANN")
+# set(CMAKE_CXX_FLAGS_RELEASE "-DNANOFLANN")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-SET(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_BUILD_TYPE "Release")
 
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
@@ -73,3 +73,6 @@ target_link_libraries(lcloam_laser_mapping_node ${EIGEN3_LIBRARIES} ${catkin_LIB
 
 add_executable(lcloam_backend_opt_node src/laserPosegraphOptimization.cpp include/scancontext/Scancontext.cpp)
 target_link_libraries(lcloam_backend_opt_node ${EIGEN3_LIBRARIES} ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${CERES_LIBRARIES} gtsam)
+
+#add_executable(tr src/transform_GT)
+#target_link_libraries(tr ${EIGEN3_LIBRARIES} ${catkin_LIBRARIES})
