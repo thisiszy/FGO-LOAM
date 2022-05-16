@@ -101,6 +101,7 @@ void LaserProcessingClass::featureExtraction(const pcl::PointCloud<pcl::PointXYZ
             else{
                 Double2d distance(j,-1);
                 cloudCurvature.push_back(distance);
+                // assert(0);
             }
 
         }
@@ -126,8 +127,13 @@ void LaserProcessingClass::featureExtraction(const pcl::PointCloud<pcl::PointXYZ
 
     pc_temp->clear();
     for(auto point : *pc_out_surf){
-        if(fabs(point.intensity - int(point.intensity)) > 0.1)
-            pc_temp->push_back(point);
+        if(fabs(point.intensity - int(point.intensity)) > 0.1){
+            point.intensity = 1.2;
+        }
+        else{
+            point.intensity = 1;
+        }
+        pc_temp->push_back(point);
     }
 
     // 将地面中的点全部作为平面点，同时加上非地面点中提取出的平面点
@@ -254,7 +260,7 @@ void LaserProcessingClass::featureExtractionFromSector(const pcl::PointCloud<pcl
         // TODO: 专门开个数组用来记录某个点是否被选中过
         if( fabs(cloudCurvature[i].value + 1) < 1e-2 && std::find(picked_points.begin(), picked_points.end(), ind)==picked_points.end() )
         {
-            if(cloudCurvature[i].value > 0.05){
+            if(cloudCurvature[i].value > 0.1){
                 break;
             }
             // 则认为该点是平面点

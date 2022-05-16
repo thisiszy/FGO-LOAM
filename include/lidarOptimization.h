@@ -25,13 +25,14 @@ class EdgeAnalyticCostFunction : public ceres::SizedCostFunction<1, 6> {
 
 class SurfNormAnalyticCostFunction : public ceres::SizedCostFunction<1, 6> {
 	public:
-		SurfNormAnalyticCostFunction(Eigen::Vector3d curr_point_, Eigen::Vector3d plane_unit_norm_, double negative_OA_dot_norm_);
+		SurfNormAnalyticCostFunction(Eigen::Vector3d curr_point_, Eigen::Vector3d plane_unit_norm_, double negative_OA_dot_norm_, double weight_);
 		virtual ~SurfNormAnalyticCostFunction() {}
 		virtual bool Evaluate(double const *const *parameters, double *residuals, double **jacobians) const;
 
 		Eigen::Vector3d curr_point;
 		Eigen::Vector3d plane_unit_norm;
 		double negative_OA_dot_norm;
+		double weight;
 };
 
 
