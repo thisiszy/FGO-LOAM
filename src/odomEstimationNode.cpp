@@ -216,6 +216,11 @@ int main(int argc, char **argv)
     // dt_file_kitti.close();
     fclose(dt_file_kitti);
     fclose(dt_file_tum);
+        
+    FILE * time_file = fopen((dt_file_loc+"time_odom.txt").c_str(), "w");
+    fprintf(time_file, "%f\n", total_time/total_frame);
+    fclose(time_file);
+
 
     return 0;
 }

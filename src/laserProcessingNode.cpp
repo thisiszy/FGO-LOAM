@@ -37,7 +37,7 @@ ros::Publisher pubEdgePoints;
 ros::Publisher pubSurfPoints;
 ros::Publisher pubLaserCloudFiltered;
 // ros::Publisher pubGroundPoints;
-ros::Publisher pubNotGroundPoints;
+// ros::Publisher pubNotGroundPoints;
 PatchWork<pcl::PointXYZI> PatchworkGroundSeg;
 
 void velodyneHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
@@ -135,11 +135,11 @@ void laser_processing(){
             // pubGroundPoints.publish(surfGroundMsg);
 
 
-            sensor_msgs::PointCloud2 surfNotGroundMsg;
-            pcl::toROSMsg(*pointcloud_not_ground, surfNotGroundMsg);
-            surfNotGroundMsg.header.stamp = pointcloud_time;
-            surfNotGroundMsg.header.frame_id = "base_link";
-            pubNotGroundPoints.publish(surfNotGroundMsg);
+            // sensor_msgs::PointCloud2 surfNotGroundMsg;
+            // pcl::toROSMsg(*pointcloud_not_ground, surfNotGroundMsg);
+            // surfNotGroundMsg.header.stamp = pointcloud_time;
+            // surfNotGroundMsg.header.frame_id = "base_link";
+            // pubNotGroundPoints.publish(surfNotGroundMsg);
 
         }
         //sleep 2 ms every time
@@ -159,11 +159,13 @@ int main(int argc, char **argv)
     double max_dis = 60.0;
     double min_dis = 2.0;
 
+    string dt_file_loc;
     nh.getParam("/scan_period", scan_period); 
     nh.getParam("/vertical_angle", vertical_angle); 
     nh.getParam("/max_dis", max_dis);
     nh.getParam("/min_dis", min_dis);
     nh.getParam("/scan_line", scan_line);
+    nh.getParam("/dt_folder", dt_file_loc);
 
     lidar_param.setScanPeriod(scan_period);
     lidar_param.setVerticalAngle(vertical_angle);
@@ -184,13 +186,17 @@ int main(int argc, char **argv)
 
     // pubGroundPoints = nh.advertise<sensor_msgs::PointCloud2>("/laser_ground", 100); 
 
-    pubNotGroundPoints = nh.advertise<sensor_msgs::PointCloud2>("/laser_not_ground", 100); 
+    // pubNotGroundPoints = nh.advertise<sensor_msgs::PointCloud2>("/laser_not_ground", 100); 
 
     std::thread laser_processing_process{laser_processing};
 
     ROS_INFO("\033[1;32m---->\033[0m Laser Processing Started.");
 
     ros::spin();
+
+    FILE * time_file = fopen((dt_file_loc+"time_proc.txt").c_str(), "w");
+    fprintf(time_file, "%f\n", total_time/total_frame);
+    fclose(time_file);
 
     printf("\033[1;33maverage laser processing time %f ms\033[0m \n \n", total_time/total_frame);
 
