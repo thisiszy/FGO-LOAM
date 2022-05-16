@@ -13,6 +13,11 @@ void LaserProcessingClass::init(lidar::Lidar lidar_param_in){
 void LaserProcessingClass::featureExtraction(const pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_ground, const pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_not_ground, pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_out_edge, pcl::PointCloud<pcl::PointXYZI>::Ptr& pc_out_surf){
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc_temp;          
     pc_temp = pc_not_ground;
+    *pc_temp += *pc_ground;
+    std::sort(pc_temp->points.begin(), pc_temp->points.end(), [](const pcl::PointXYZI & a, const pcl::PointXYZI & b)
+    { 
+        return a.intensity < b.intensity; 
+    });
 
     std::vector<int> indices;
     pcl::removeNaNFromPointCloud(*pc_temp, indices);
@@ -118,8 +123,16 @@ void LaserProcessingClass::featureExtraction(const pcl::PointCloud<pcl::PointXYZ
         }
 
     }
+
+    pc_temp->clear();
+    for(auto point : *pc_out_surf){
+        if(fabs(point.intensity - int(point.intensity)) > 0.1)
+            pc_temp->push_back(point);
+    }
+
     // 将地面中的点全部作为平面点，同时加上非地面点中提取出的平面点
-    *pc_out_surf += *pc_ground;
+    // *pc_out_surf += *pc_ground;
+    pc_out_surf = pc_temp;
 
 }
 
@@ -241,6 +254,9 @@ void LaserProcessingClass::featureExtractionFromSector(const pcl::PointCloud<pcl
         // TODO: 专门开个数组用来记录某个点是否被选中过
         if( fabs(cloudCurvature[i].value + 1) < 1e-2 && std::find(picked_points.begin(), picked_points.end(), ind)==picked_points.end() )
         {
+            if(cloudCurvature[i].value > 0.05){
+                break;
+            }
             // 则认为该点是平面点
             pc_out_surf->push_back(pc_in->points[ind]);
         }

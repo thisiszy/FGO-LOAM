@@ -102,7 +102,7 @@ bool SurfNormAnalyticCostFunction::Evaluate(double const *const *parameters, dou
     getPose(parameters, q_w_curr, t_w_curr);
     Eigen::Vector3d point_w = q_w_curr * curr_point + t_w_curr;
     // residuals[0]=平面法向量 . w的向量 + 法向量的反向，这个值越小越好
-    residuals[0] = plane_unit_norm.dot(point_w) + negative_OA_dot_norm;
+    residuals[0] = 1.2 * (plane_unit_norm.dot(point_w) + negative_OA_dot_norm);
 
     if(jacobians != NULL && jacobians[0] != NULL)
     {

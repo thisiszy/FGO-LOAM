@@ -81,14 +81,14 @@ void laser_processing(){
             //     return a.intensity < b.intensity; 
             // });
             // 将被patchwork打乱之后的点云重新编号
-            std::sort(pointcloud_not_ground->points.begin(), pointcloud_not_ground->points.end(), [](const pcl::PointXYZI & a, const pcl::PointXYZI & b)
-            { 
-                return a.intensity < b.intensity; 
-            });
-            // // 标记ground点云
-            // for(auto &point : pointcloud_ground->points){
-            //     point.intensity += 0.5;
-            // }
+            // std::sort(pointcloud_not_ground->points.begin(), pointcloud_not_ground->points.end(), [](const pcl::PointXYZI & a, const pcl::PointXYZI & b)
+            // { 
+            //     return a.intensity < b.intensity; 
+            // });
+            // 标记ground点云
+            for(auto &point : pointcloud_ground->points){
+                point.intensity += 0.5;
+            }
 
             pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_edge(new pcl::PointCloud<pcl::PointXYZI>());          
             pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_surf(new pcl::PointCloud<pcl::PointXYZI>());
