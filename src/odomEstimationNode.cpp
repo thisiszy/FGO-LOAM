@@ -79,21 +79,41 @@ void odom_estimation(){
 
             pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_surf_in(new pcl::PointCloud<pcl::PointXYZI>());
             pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_edge_in(new pcl::PointCloud<pcl::PointXYZI>());
+
+            pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud_surf_in_tmp(new pcl::PointCloud<pcl::PointXYZRGB>());
+            pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud_edge_in_tmp(new pcl::PointCloud<pcl::PointXYZRGB>());
+
             pcl::fromROSMsg(*pointCloudEdgeBuf.front(), *pointcloud_edge_in);
             pcl::fromROSMsg(*pointCloudSurfBuf.front(), *pointcloud_surf_in);
             ros::Time pointcloud_time = (pointCloudSurfBuf.front())->header.stamp;
             pointCloudEdgeBuf.pop();
             pointCloudSurfBuf.pop();
             mutex_lock.unlock();
+            for(auto point : *pointcloud_edge_in){
+                pcl::PointXYZRGB tmp;
+                tmp.x = point.x;
+                tmp.y = point.y;
+                tmp.z = point.z;
+                tmp.b = point.intensity;
+                pointcloud_edge_in_tmp->push_back(tmp);
+            }
+            for(auto point : *pointcloud_surf_in){
+                pcl::PointXYZRGB tmp;
+                tmp.x = point.x;
+                tmp.y = point.y;
+                tmp.z = point.z;
+                tmp.b = point.intensity;
+                pointcloud_surf_in_tmp->push_back(tmp);
+            }
 
             if(is_odom_inited == false){
-                odomEstimation.initMapWithPoints(pointcloud_edge_in, pointcloud_surf_in);
+                odomEstimation.initMapWithPoints(pointcloud_edge_in_tmp, pointcloud_surf_in_tmp);
                 is_odom_inited = true;
                 ROS_INFO("odom inited");
             }else{
                 std::chrono::time_point<std::chrono::system_clock> start, end;
                 start = std::chrono::system_clock::now();
-                odomEstimation.updatePointsToMap(pointcloud_edge_in, pointcloud_surf_in);
+                odomEstimation.updatePointsToMap(pointcloud_edge_in_tmp, pointcloud_surf_in_tmp);
                 end = std::chrono::system_clock::now();
                 std::chrono::duration<float> elapsed_seconds = end - start;
                 total_frame++;
@@ -158,6 +178,7 @@ int main(int argc, char **argv)
     double min_dis = 2.0;
     double map_resolution = 0.4;
     std::string dt_file_loc;
+    double _k, _king, _theta;
     nh.getParam("/scan_period", scan_period); 
     nh.getParam("/vertical_angle", vertical_angle); 
     nh.getParam("/max_dis", max_dis);
@@ -165,6 +186,9 @@ int main(int argc, char **argv)
     nh.getParam("/scan_line", scan_line);
     nh.getParam("/map_resolution", map_resolution);
     nh.getParam("/dt_folder", dt_file_loc);
+    nh.getParam("/k", _k);
+    nh.getParam("/king", _king);
+    nh.getParam("/theta", _theta);
 
     lidar_param.setScanPeriod(scan_period);
     lidar_param.setVerticalAngle(vertical_angle);
@@ -172,7 +196,7 @@ int main(int argc, char **argv)
     lidar_param.setMaxDistance(max_dis);
     lidar_param.setMinDistance(min_dis);
 
-    odomEstimation.init(lidar_param, map_resolution);
+    odomEstimation.init(lidar_param, map_resolution, _k, _king, _theta);
     ros::Subscriber subEdgeLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud_edge", 100, velodyneEdgeHandler);
     ros::Subscriber subSurfLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud_surf", 100, velodyneSurfHandler);
 
