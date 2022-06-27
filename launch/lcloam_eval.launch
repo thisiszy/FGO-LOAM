@@ -36,14 +36,14 @@
     <node pkg="lcloam" type="lcloam_odom_estimation_node" name="lcloam_odom_estimation_node" output="screen"/>
     <node pkg="lcloam" type="lcloam_laser_processing_node" name="lcloam_laser_processing_node" output="screen"/>
     <!-- <node pkg="lcloam" type="lcloam_laser_mapping_node" name="lcloam_laser_mapping_node" output="screen"/> -->
-    <!-- <node pkg="lcloam" type="lcloam_backend_opt_node" name="lcloam_backend_opt_node" output="screen"/> -->
+    <node pkg="lcloam" type="lcloam_backend_opt_node" name="lcloam_backend_opt_node" output="screen"/>
 
     <node pkg="tf" type="static_transform_publisher" name="word2map_tf"  args="0 0 0 0 0 0 /world /map 10" />
 
     <rosparam command="load" file="$(find lcloam)/config/params.yaml" />
 
     <arg name="bag_path"/>
-    <node pkg="rosbag" type="play" name="rosbag_play" args="--clock --wait-for-subscribers -r 2 $(arg bag_path)"/> 
+    <node pkg="rosbag" type="play" name="rosbag_play" args="--clock --wait-for-subscribers -r 1.5 $(arg bag_path)"/> 
     
     <!-- <arg name="rviz" default="true" />
     <group if="$(arg rviz)">

@@ -114,6 +114,7 @@ public:
 
     bool is_tree_batch_made = false;
     std::unique_ptr<InvKeyTree> polarcontext_tree_batch_;
+    void save_sc_to_file(std::string filename, Eigen::MatrixXd& sc);
 
 }; // SCManager
 

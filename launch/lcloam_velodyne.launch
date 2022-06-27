@@ -31,7 +31,7 @@
     <!--- -->
     <node pkg="lcloam" type="lcloam_odom_estimation_node" name="lcloam_odom_estimation_node" output="screen"/>
     <node pkg="lcloam" type="lcloam_laser_processing_node" name="lcloam_laser_processing_node" output="screen"/>
-    <!-- <node pkg="lcloam" type="lcloam_backend_opt_node" name="lcloam_backend_opt_node" output="screen"/> -->
+    <node pkg="lcloam" type="lcloam_backend_opt_node" name="lcloam_backend_opt_node" output="screen"/>
 
     <node pkg="tf" type="static_transform_publisher" name="word2map_tf"  args="0 0 0 0 0 0 /world /map 10" />
 

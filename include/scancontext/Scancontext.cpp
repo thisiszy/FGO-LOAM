@@ -332,6 +332,13 @@ std::pair<int, float> SCManager::detectLoopClosureIDBetweenSession (std::vector<
 
 } // SCManager::detectLoopClosureIDBetweenSession
 
+void SCManager::save_sc_to_file(std::string filename, Eigen::MatrixXd& sc){
+    std::ofstream file(filename);
+    if (file.is_open())
+    {
+        file << sc;
+    }
+}
 
 std::pair<int, float> SCManager::detectLoopClosureID ( void )
 {
@@ -409,6 +416,8 @@ std::pair<int, float> SCManager::detectLoopClosureID ( void )
     
         // std::cout.precision(3); 
         cout << "[Loop found] Nearest distance: " << min_dist << " btn " << polarcontexts_.size()-1 << " and " << nn_idx << "." << endl;
+        save_sc_to_file("match.txt", polarcontexts_[ nn_idx ]);
+        save_sc_to_file("query.txt", polarcontexts_.back());
         // cout << "[Loop found] yaw diff: " << nn_align * PC_UNIT_SECTORANGLE << " deg." << endl;
     }
     else
